@@ -87,7 +87,10 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
- 
+ 	LedOff(RED);
+	LedOff(WHITE);
+	LedOff(PURPLE);
+	LedOff(BLUE);
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -136,7 +139,107 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+	static u8 u8RealPassword[]={1,2,3,1,2,3};
+	static u8 u8UserPassword[]={0,0,0,0,0,0};
+	static u8 u8Index=0;
+	static u8 u8Comfirm=0;
+	static u16 u16Counter=0;
+	static bool bPressed=FALSE;
+	static bool bIsOk=TRUE;
+	u8 u8TempIndex;
+	
+	if(WasButtonPressed(BUTTON3))
+	{
+		ButtonAcknowledge(BUTTON3);		
+		u8Comfirm++;
+	}
+	
+	if(u8Comfirm==2)
+	{
+		for(u8TempIndex=0;u8TempIndex<6;u8TempIndex++)
+		{
+			if(u8RealPassword[u8TempIndex]!=u8UserPassword[u8TempIndex])
+			{
+				bIsOk=FALSE;
+				break;
+			}
+			else
+			{
+				bIsOk=TRUE;
+			}
+			
+		}
+		
+		if(bIsOk)
+		{
+			LedOn(WHITE);
+			LedOff(PURPLE);
+		}
+		else
+		{
+			LedOff(WHITE);
+			LedOn(PURPLE);
+		}
+		LedOff(BLUE);
+		u8Comfirm=0;
+		u8Index=0;
+	}
+	
+	if(u8Comfirm==1)
+	{
+		LedOn(BLUE);
+		LedOff(PURPLE);
+		LedOff(WHITE);
+		
+		if(u8Index<6)
+		{   
+			if(WasButtonPressed(BUTTON0))
+			{
+				ButtonAcknowledge(BUTTON0);
+				LedOn(RED);
+				PWMAudioOn(BUZZER1);
+				PWMAudioSetFrequency(BUZZER1, 1000);
+				bPressed=TRUE;
+				u8UserPassword[u8Index]=1;
+				u8Index++;
+			}
+		
+			if(WasButtonPressed(BUTTON1))
+			{
+				ButtonAcknowledge(BUTTON1);
+				LedOn(RED);
+				PWMAudioOn(BUZZER1);
+				PWMAudioSetFrequency(BUZZER1, 1000);
+				bPressed=TRUE;
+				u8UserPassword[u8Index]=2;
+				u8Index++;
+			}
+		
+			if(WasButtonPressed(BUTTON2))
+			{
+				ButtonAcknowledge(BUTTON2);
+				LedOn(RED);
+				PWMAudioOn(BUZZER1);
+				PWMAudioSetFrequency(BUZZER1, 1000);
+				bPressed=TRUE;
+				u8UserPassword[u8Index]=3;
+				u8Index++;
+			}
+		}
+		
+		if(bPressed==TRUE)
+		{
+			u16Counter++;
+				
+			if(u16Counter==100)
+			{
+				u16Counter=0;
+				LedOff(RED);
+				PWMAudioOff(BUZZER1);
+				bPressed=FALSE;
+			}
+		}
+	}
 } /* end UserApp1SM_Idle() */
     
 
