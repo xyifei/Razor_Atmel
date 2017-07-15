@@ -52,6 +52,8 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern u8 G_u8DebugScanfCharCount;
+
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -87,11 +89,11 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
- 	LedOff(RED);
+    LedOff(RED);
 	LedOff(WHITE);
 	LedOff(PURPLE);
 	LedOff(BLUE);
-	PWMAudioSetFrequency(BUZZER1, 1000);
+	PWMAudioSetFrequency(BUZZER1,1000);
 	
   /* If good initialization, set state to Idle */
   if( 1 )
@@ -141,27 +143,51 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-    static u8 u8RealPassword[]={1,2,3,1,2,3};
-	static u8 u8UserPassword[]={0,0,0,0,0,0};
+	static u8 u8RealPassword[]={'1','2','3','1','2','3'};
+	static u8 u8UserPassword[6];
 	static u8 u8Index=0;
 	static u8 u8Comfirm=0;
 	static u16 u16Counter=0;
 	static bool bPressed=FALSE;
 	static bool bIsOk=TRUE;
+	static bool bWrite=FALSE;
 	u8 u8TempIndex;
 	
 	if(WasButtonPressed(BUTTON3))
-	{   
-	  	ButtonAcknowledge(BUTTON0);
-		ButtonAcknowledge(BUTTON1);
-		ButtonAcknowledge(BUTTON2);
-		ButtonAcknowledge(BUTTON3);		
-		bPressed=TRUE;
-		PWMAudioOn(BUZZER1);
+	{
+		ButtonAcknowledge(BUTTON0);
+	  	ButtonAcknowledge(BUTTON1);
+	  	ButtonAcknowledge(BUTTON2);
+	  	ButtonAcknowledge(BUTTON3);		
 		u8Comfirm++;
 	}
 	
-	if(u8Comfirm==2)
+	if(IsButtonHeld(BUTTON3,2000))    //determine whether to change the password
+	{
+		bWrite=TRUE;
+		u8Comfirm=0;
+	}
+		
+	if(bWrite)
+	{
+		if(bIsOk)                    //only when you know the right password can you change the password
+		{
+			LedOn(YELLOW);
+			LedOff(BLUE);
+			LedOff(WHITE);
+			LedOff(PURPLE);
+			LedOff(WHITE);
+			
+			if(G_u8DebugScanfCharCount>=6)  //Use debug to enter the password
+			{
+				DebugScanf(u8RealPassword);
+				LedOff(YELLOW);
+				bWrite=FALSE;
+			}
+		}
+	}
+	
+	if(u8Comfirm==2)   //determine whether the password is right or not
 	{
 		for(u8TempIndex=0;u8TempIndex<6;u8TempIndex++)
 		{
@@ -174,7 +200,6 @@ static void UserApp1SM_Idle(void)
 			{
 				bIsOk=TRUE;
 			}
-			
 		}
 		
 		if(bIsOk)
@@ -188,15 +213,16 @@ static void UserApp1SM_Idle(void)
 			LedOn(PURPLE);
 		}
 		LedOff(BLUE);
-		u8Comfirm=0;
 		u8Index=0;
+		u8Comfirm=0;
 	}
 	
-	if(u8Comfirm==1)
+	if(u8Comfirm==1)    //press the button and save the keyvalue
 	{
 		LedOn(BLUE);
 		LedOff(PURPLE);
 		LedOff(WHITE);
+		LedOff(YELLOW);
 		
 		if(u8Index<6)
 		{   
@@ -204,9 +230,9 @@ static void UserApp1SM_Idle(void)
 			{
 				ButtonAcknowledge(BUTTON0);
 				LedOn(RED);
-				PWMAudioOn(BUZZER1);
 				bPressed=TRUE;
-				u8UserPassword[u8Index]=1;
+				PWMAudioOn(BUZZER1);
+				u8UserPassword[u8Index]='1';
 				u8Index++;
 			}
 		
@@ -214,9 +240,9 @@ static void UserApp1SM_Idle(void)
 			{
 				ButtonAcknowledge(BUTTON1);
 				LedOn(RED);
-				PWMAudioOn(BUZZER1);
 				bPressed=TRUE;
-				u8UserPassword[u8Index]=2;
+				PWMAudioOn(BUZZER1);
+				u8UserPassword[u8Index]='2';
 				u8Index++;
 			}
 		
@@ -224,24 +250,24 @@ static void UserApp1SM_Idle(void)
 			{
 				ButtonAcknowledge(BUTTON2);
 				LedOn(RED);
-				PWMAudioOn(BUZZER1);
 				bPressed=TRUE;
-				u8UserPassword[u8Index]=3;
+				PWMAudioOn(BUZZER1);
+				u8UserPassword[u8Index]='3';
 				u8Index++;
 			}
 		}
-	}
-	
-	if(bPressed==TRUE)
-	{
-		u16Counter++;
-			
-		if(u16Counter==100)
+		
+		if(bPressed==TRUE)  //let the LED turn for 10ms
 		{
-			u16Counter=0;
-			LedOff(RED);
-			PWMAudioOff(BUZZER1);
-			bPressed=FALSE;
+			u16Counter++;
+				
+			if(u16Counter==100)
+			{
+				u16Counter=0;
+				LedOff(RED);
+				PWMAudioOff(BUZZER1);
+				bPressed=FALSE;
+			}
 		}
 	}
 } /* end UserApp1SM_Idle() */
