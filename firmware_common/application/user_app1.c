@@ -52,6 +52,7 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern u8 G_u8DebugScanfCharCount;
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -87,7 +88,9 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
- 
+	LedOff(RED);
+	LedOff(WHITE);
+	
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -136,7 +139,80 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+	static u8 u8EnterIn[10];
+    bool bIsOk=TRUE;	
+    u8 u8Index=0;
+	
+  	if(G_u8DebugScanfCharCount>=10)
+	{
+		DebugScanf(u8EnterIn);//use debug to enter in
+		
+		if(u8EnterIn[u8Index]>=65&&u8EnterIn[u8Index]<=90||u8EnterIn[u8Index]>=97&&u8EnterIn[u8Index]<=122)//determine whether the format is rihght or not 
+		{
+			u8Index++;
+		}
+		else
+		{
+			bIsOk=FALSE;
+			u8Index++;
+		}
+		
+		if(u8EnterIn[u8Index]=='-')
+		{
+			u8Index++;
+		}
+		else
+		{
+			bIsOk=FALSE;
+			u8Index++;
+		}
+		
+		for(u8Index=2;u8Index<=4;u8Index++)
+		{
+			if(u8EnterIn[u8Index]>=48&&u8EnterIn[u8Index]<=57)
+			{
+				;
+			}
+			else
+			{
+				bIsOk=FALSE;
+			}
+		}
+		
+		if(u8EnterIn[u8Index]=='-')
+		{
+			u8Index++;
+		}
+		else
+		{
+			bIsOk=FALSE;
+			u8Index++;
+		}
+		
+		for(u8Index=6;u8Index<=9;u8Index++)
+		{
+			if(u8EnterIn[u8Index]>=48&&u8EnterIn[u8Index]<=57)
+			{
+				;
+			}
+			else
+			{
+				bIsOk=FALSE;
+			}
+		}
+		
+		if(bIsOk)//determine turn on which LED
+		{
+			LedOn(RED);
+			LedOff(WHITE);
+		}
+		else
+		{
+			LedOn(WHITE);
+			LedOff(RED);
+		}
+	}
+	
 } /* end UserApp1SM_Idle() */
     
 
