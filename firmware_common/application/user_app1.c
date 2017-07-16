@@ -52,6 +52,9 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern u8 G_au8DebugScanfBuffer[];  
+extern u8 G_u8DebugScanfCharCount; 
+
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -136,7 +139,38 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+  	static u8 u8EnterIn[]={0};
+	static u8 u8Judge[100];
+	static u8 u8Index=0;
+	static u32 u32Counter=0;
+  
+  	if(G_u8DebugScanfCharCount>=1)//make a judgement every time
+	{
+		DebugScanf(u8EnterIn);
+		u8Judge[u8Index]=u8EnterIn[0];//Save the input values in an array
+		
+		if(u8Index>=2)
+		{
+			if(u8Judge[u8Index-2]=='X')
+			{
+				if(u8Judge[u8Index-1]=='Y')
+				{
+					if(u8Judge[u8Index]=='F')
+					{
+						u32Counter++;
+						DebugLineFeed();
+						DebugPrintNumber(u32Counter);//output number
+												
+					}
+				}
+			}
+		}
+		
+		u8Index++;
+	}
+	
+	
+	
 } /* end UserApp1SM_Idle() */
     
 
