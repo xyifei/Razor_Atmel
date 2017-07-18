@@ -60,39 +60,39 @@ space can be used for scrolling displays.
 /* LCD Commands */
 /* "CMD" requires RS = 0, R/W = 0 */
 /* Data sheet initialization values */
-#define   NUM_CONTROL_CMD     (u8)6
+#define     NUM_CONTROL_CMD     	(u8)6
 #define		LCD_FUNCTION_CMD		(u8)0x38		/* Literal to set 8-bit bus, 2-line, 5x8 chars, function table 00 */
 #define		LCD_FUNCTION2_CMD		(u8)0x39		/* Literal to set 8-bit bus, 2-line, 5x8 chars, function table 01 */
-#define   LCD_BIAS_CMD        (u8)0x14    /* Set 1/5 bias and fixed on low */
-#define   LCD_CONTRAST_CMD    (u8)0x72    /* Set contrast (default 0x78) */
-#define   LCD_DISPLAY_SET_CMD (u8)0x5E    /* Set power, icon control, contrast */
-#define   LCD_FOLLOWER_CMD    (u8)0x6D    /* Set follower (not sure what this means!) */
+#define     LCD_BIAS_CMD            (u8)0x14   		/* Set 1/5 bias and fixed on low */
+#define     LCD_CONTRAST_CMD        (u8)0x72    	/* Set contrast (default 0x78) */
+#define     LCD_DISPLAY_SET_CMD     (u8)0x5E    	/* Set power, icon control, contrast */
+#define     LCD_FOLLOWER_CMD        (u8)0x6D    	/* Set follower (not sure what this means!) */
 
-#define		LCD_CLEAR_CMD				(u8)0x01		/* Writes spaces to all chars */
-#define		LCD_HOME_CMD				(u8)0x02		/* Puts cursor at 0x00 */
+#define		LCD_CLEAR_CMD			(u8)0x01		/* Writes spaces to all chars */
+#define		LCD_HOME_CMD			(u8)0x02		/* Puts cursor at 0x00 */
 
 #define		LCD_CURSOR_RT_CMD		(u8)0x06		/* Cursor moves right after char */
 #define		LCD_CURSOR_LT_CMD		(u8)0x04		/* Cursor moves left after char */
-#define   LCD_DISPLAY_RT_CMD  (u8)0x05    /* Entire display shifts right after each write */
-#define   LCD_DISPLAY_LT_CMD  (u8)0x07    /* Entire display shifts left after each write */
+#define     LCD_DISPLAY_RT_CMD      (u8)0x05  		/* Entire display shifts right after each write */
+#define     LCD_DISPLAY_LT_CMD      (u8)0x07    	/* Entire display shifts left after each write */
 
 #define		LCD_DISPLAY_CMD			(u8)0x08		/* Root literal for managing display */
 #define		LCD_DISPLAY_ON			(u8)0x04		/* OR with LCD_DISPLAY_CMD to turn display on */
-#define		LCD_DISPLAY_CURSOR	(u8)0x02		/* OR with LCD_DISPLAY_CMD to turn cursor on */
+#define		LCD_DISPLAY_CURSOR   	(u8)0x02		/* OR with LCD_DISPLAY_CMD to turn cursor on */
 #define		LCD_DISPLAY_BLINK		(u8)0x01		/* OR with LCD_DISPLAY_CMD to turn cursor blink on */
 
-#define		LCD_SHIFT_CMD				(u8)0x10		/* Root literal for display / cursor shift commands */
+#define		LCD_SHIFT_CMD			(u8)0x10		/* Root literal for display / cursor shift commands */
 #define		LCD_SHIFT_DISPLAY		(u8)0x08		/* Set to operate on dislay, clear for cursor */
 #define		LCD_SHIFT_RIGHT			(u8)0x04		/* Set to shift right, clear to shift left */
 
 #define		LCD_ADDRESS_CMD			(u8)0x80		/* Root literal to set the cursor position */
 																			    /* Bottom 6 bits are address (0x00-0x27 and 0x40-0x67) */
 #define		LINE1_START_ADDR		(u8)0x00 		/* Constant for defining cursor location for LINE1 */
-#define		LINE2_START_ADDR  	(u8)0x40 		/* Constant for defining cursor location for LINE2 */
-#define   LINE1_END_ADDR      (u8)0x13    /* Constant for last displayable character address in LINE1 */
-#define   LINE2_END_ADDR      (u8)0x53    /* Constant for last displayable character address in LINE2 */
-#define   LINE1_END_ABSOLUTE  (u8)0x27    /* Constant for last character RAM address in LINE1 */
-#define   LINE2_END_ABSOLUTE  (u8)0x67    /* Constant for last character RAM address in LINE2 */
+#define		LINE2_START_ADDR  	    (u8)0x40 		/* Constant for defining cursor location for LINE2 */
+#define     LINE1_END_ADDR      	(u8)0x13        /* Constant for last displayable character address in LINE1 */
+#define     LINE2_END_ADDR      	(u8)0x53        /* Constant for last displayable character address in LINE2 */
+#define     LINE1_END_ABSOLUTE  	(u8)0x27   		/* Constant for last character RAM address in LINE1 */
+#define     LINE2_END_ABSOLUTE  	(u8)0x67    	/* Constant for last character RAM address in LINE2 */
 
 /**********************************************************************************************************************
 * Function Declarations

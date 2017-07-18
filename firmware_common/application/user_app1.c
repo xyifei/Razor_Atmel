@@ -52,6 +52,8 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern u8 G_u8DebugScanfCharCount;
+
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -87,6 +89,15 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+	LCDCommand(LCD_CLEAR_CMD);
+	LedOff(WHITE);
+	LedOff(PURPLE);
+	LedOff(BLUE);
+	LedOff(CYAN);
+	LedOff(GREEN);
+	LedOff(YELLOW);
+	LedOff(ORANGE);
+	LedOff(RED);
  
   /* If good initialization, set state to Idle */
   if( 1 )
@@ -136,7 +147,73 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+	static u8 au8Message[255];//用于LCD输出
+	static u8 au8PrintOut[255];//保存Debug输入的每个字符
+	static u8 au8EnterIn[255];
+	LedNumberType au8LedNumber[]={WHITE, PURPLE, BLUE, CYAN, GREEN, YELLOW, ORANGE, RED};
+	static u16 u16TimeCounter=0;
+	u8 u8Index=0;
+	static u8 u8Index2=0;
+	static u8 u8Index3=0;
+	static u8 u8PrintCounter=0;
+		
+	if(G_u8DebugScanfCharCount>=1)//每次输入一个字符都将它保存在au8PrintOut中
+ 	{
+ 		DebugScanf(au8EnterIn);
+ 		au8PrintOut[u8Index2]=au8EnterIn[0];
+		u8Index2++;
+	}
+	
+	if(au8PrintOut[u8Index2-1]=='\r')//如果输入的字符是回车，即按下了确认键
+	{
+	  	u16TimeCounter++;
+		
+		if(u16TimeCounter==500)
+		{
+			for(u8Index=0;u8Index<20;u8Index++)//把au8PrintOut中的字符给au8Message,每过0.5s就左移一个
+			{
+				if(u8Index<=(19-u8PrintCounter))
+				{
+					au8Message[u8Index]=32;//屏幕左边没有字符的单元给（speace）
+				}
+				else
+				{
+					au8Message[u8Index]=au8PrintOut[u8Index-(19-u8PrintCounter)-1];
+				}
+			}
+			
+			if(au8Message[0]==au8PrintOut[u8Index2-1])//当要输入的字符最后一个到屏幕最开始时重置
+			{
+				u8PrintCounter=0;
+			}
+			else
+			{
+				LCDMessage(LINE1_START_ADDR, au8Message);
+			}
+			
+			if(u8Index3<8)//每过0.5s就往后亮一个LED，直到八个都亮了后重置
+			{
+				LedOn(au8LedNumber[u8Index3]);
+			}
+			else
+			{
+				u8Index3=0;
+				LedOff(PURPLE);
+				LedOff(BLUE);
+				LedOff(CYAN);
+				LedOff(GREEN);
+				LedOff(YELLOW);
+				LedOff(ORANGE);
+				LedOff(RED);
+			}
+			
+			u16TimeCounter=0;
+			u8PrintCounter++;
+			u8Index3++;
+			
+			
+		}
+	}
 } /* end UserApp1SM_Idle() */
     
 
