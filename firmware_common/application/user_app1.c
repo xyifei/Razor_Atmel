@@ -87,6 +87,9 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+  	LedOff(RED);
+	LedOff(GREEN);
+	LCDCommand(LCD_CLEAR_CMD);
  
   /* If good initialization, set state to Idle */
   if( 1 )
@@ -136,7 +139,70 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+	static u32 u32TimeCounter=0;
+	static u16 u16DisplayCounter=0;
+	static u8 au8Time[4];
+	static u8 au8TimeChar[4];
+	static u8 au8Message[]=" 0 0 0 0 0 0 0 0";
+	LedNumberType eLedNum[8]={WHITE, PURPLE, BLUE, CYAN, GREEN, YELLOW, ORANGE, RED};
+	LedCommandType aeDemoList[]=
+	{
+	  {RED,1000,TRUE,LED_PWM_100},
+	  {RED,6000,FALSE,LED_PWM_0},
+	  {GREEN,3000,TRUE,LED_PWM_100},
+	  {GREEN,9000,FALSE,LED_PWM_0},
+	  {YELLOW,500,TRUE,LED_PWM_100},
+	  {YELLOW,7000,FALSE,LED_PWM_0}
+	};
+	
+	u32TimeCounter++;
+	u16DisplayCounter++;
+	
+	if(u32TimeCounter==10000)
+	{
+		u32TimeCounter=0;
+	}
+	
+	for(u8 i=0;i<6;i++)
+	{
+		if(u32TimeCounter==aeDemoList[i].u32Time)
+		{
+			LedPWM(aeDemoList[i].eLed,aeDemoList[i].eCurrentRate);
+			for(u8 k=0;k<8;k++)
+			{
+				if(aeDemoList[i].eLed==eLedNum[k])
+				{
+					if(aeDemoList[i].bOn)
+					{
+						au8Message[2*k+1]='1';
+					}
+					else
+					{
+						au8Message[2*k+1]='0';
+					}
+				}
+			}
+			LCDMessage(LINE1_START_ADDR,au8Message );
+			LCDClearChars(LINE1_START_ADDR + 16, 4);
+		}
+	}
+	
+	if(u16DisplayCounter==100)
+	{
+		au8Time[0]=u32TimeCounter/1000;
+		au8Time[1]=u32TimeCounter/100-au8Time[0]*10;
+		au8Time[2]=u32TimeCounter/10-au8Time[0]*100-au8Time[1]*10;
+		au8Time[3]=u32TimeCounter%10;
+		for(u8 j=0;j<4;j++)
+		{
+			au8TimeChar[j]=au8Time[j]+48;
+		}
+		LCDMessage(LINE2_START_ADDR + 8, au8TimeChar);
+		LCDClearChars(LINE2_START_ADDR + 12, 8);
+		LCDClearChars(LINE2_START_ADDR, 8);
+		u16DisplayCounter=0;
+	}
+	
 } /* end UserApp1SM_Idle() */
     
 
