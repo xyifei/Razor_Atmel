@@ -151,28 +151,28 @@ static void UserApp1SM_Idle(void)
 	  {RED,6000,FALSE,LED_PWM_0},
 	  {GREEN,3000,TRUE,LED_PWM_100},
 	  {GREEN,9000,FALSE,LED_PWM_0},
-	  {YELLOW,500,TRUE,LED_PWM_100},
+	  {YELLOW,1000,TRUE,LED_PWM_100},
 	  {YELLOW,7000,FALSE,LED_PWM_0}
 	};
 	
 	u32TimeCounter++;
 	u16DisplayCounter++;
 	
-	if(u32TimeCounter==10000)
+	if(u32TimeCounter==10000)//10s一个周期
 	{
 		u32TimeCounter=0;
 	}
 	
-	for(u8 i=0;i<6;i++)
+	for(u8 i=0;i<6;i++)//有六种亮灯的情况，逐一判断
 	{
 		if(u32TimeCounter==aeDemoList[i].u32Time)
 		{
-			LedPWM(aeDemoList[i].eLed,aeDemoList[i].eCurrentRate);
+			LedPWM(aeDemoList[i].eLed,aeDemoList[i].eCurrentRate);//什么时候点亮什么灯
 			for(u8 k=0;k<8;k++)
 			{
-				if(aeDemoList[i].eLed==eLedNum[k])
+				if(aeDemoList[i].eLed==eLedNum[k])//判断哪一个灯亮，LCD上哪一个数字变化
 				{
-					if(aeDemoList[i].bOn)
+					if(aeDemoList[i].bOn)//判断该数字是变为一还是变为零
 					{
 						au8Message[2*k+1]='1';
 					}
@@ -182,22 +182,22 @@ static void UserApp1SM_Idle(void)
 					}
 				}
 			}
-			LCDMessage(LINE1_START_ADDR,au8Message );
+			LCDMessage(LINE1_START_ADDR,au8Message );//在LCD上显示哪个灯亮
 			LCDClearChars(LINE1_START_ADDR + 16, 4);
 		}
 	}
 	
-	if(u16DisplayCounter==100)
+	if(u16DisplayCounter==100)//每过100ms显示的时间变化一次
 	{
 		au8Time[0]=u32TimeCounter/1000;
 		au8Time[1]=u32TimeCounter/100-au8Time[0]*10;
-		au8Time[2]=u32TimeCounter/10-au8Time[0]*100-au8Time[1]*10;
+		au8Time[2]=u32TimeCounter/10-au8Time[0]*100-au8Time[1]*10;//把要显示的时间的每一位提取出来
 		au8Time[3]=u32TimeCounter%10;
 		for(u8 j=0;j<4;j++)
 		{
-			au8TimeChar[j]=au8Time[j]+48;
+			au8TimeChar[j]=au8Time[j]+48;//把时间的每一位都转化位字符
 		}
-		LCDMessage(LINE2_START_ADDR + 8, au8TimeChar);
+		LCDMessage(LINE2_START_ADDR + 8, au8TimeChar);//在第二行中间显示时间
 		LCDClearChars(LINE2_START_ADDR + 12, 8);
 		LCDClearChars(LINE2_START_ADDR, 8);
 		u16DisplayCounter=0;
