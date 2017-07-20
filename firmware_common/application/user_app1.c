@@ -168,49 +168,56 @@ static void UserApp1SM_Idle(void)
 	{
 	  	u16TimeCounter++;
 		
-		if(u16TimeCounter==500)
+		if(u8Index2<20)
 		{
-			for(u8Index=0;u8Index<20;u8Index++)//把au8PrintOut中的字符给au8Message,每过0.5s就左移一个
+		  LCDMessage(LINE1_START_ADDR,au8PrintOut);
+		}
+		else
+		{
+			if(u16TimeCounter==500)
 			{
-				if(u8Index<=(19-u8PrintCounter))
+				for(u8Index=0;u8Index<20;u8Index++)//把au8PrintOut中的字符给au8Message,每过0.5s就左移一个
 				{
-					au8Message[u8Index]=32;//屏幕左边没有字符的单元给（speace）
+					if(u8Index<=(19-u8PrintCounter))
+					{
+						au8Message[u8Index]=32;//屏幕左边没有字符的单元给（speace）
+					}
+					else
+					{
+						au8Message[u8Index]=au8PrintOut[u8Index-(19-u8PrintCounter)-1];
+					}
+				}
+				
+				if(au8Message[0]==au8PrintOut[u8Index2-1])//当要输入的字符最后一个到屏幕最开始时重置
+				{
+					u8PrintCounter=0;
 				}
 				else
 				{
-					au8Message[u8Index]=au8PrintOut[u8Index-(19-u8PrintCounter)-1];
+					LCDMessage(LINE1_START_ADDR, au8Message);
 				}
+				
+				if(u8Index3<8)//每过0.5s就往后亮一个LED，直到八个都亮了后重置
+				{
+					LedOn(au8LedNumber[u8Index3]);
+				}
+				else
+				{
+					u8Index3=0;
+					LedOff(PURPLE);
+					LedOff(BLUE);
+					LedOff(CYAN);
+					LedOff(GREEN);
+					LedOff(YELLOW);
+					LedOff(ORANGE);
+					LedOff(RED);
+				}
+				
+				u16TimeCounter=0;
+				u8PrintCounter++;
+				u8Index3++;
 			}
-			
-			if(au8Message[0]==au8PrintOut[u8Index2-1])//当要输入的字符最后一个到屏幕最开始时重置
-			{
-				u8PrintCounter=0;
-			}
-			else
-			{
-				LCDMessage(LINE1_START_ADDR, au8Message);
-			}
-			
-			if(u8Index3<8)//每过0.5s就往后亮一个LED，直到八个都亮了后重置
-			{
-				LedOn(au8LedNumber[u8Index3]);
-			}
-			else
-			{
-				u8Index3=0;
-				LedOff(PURPLE);
-				LedOff(BLUE);
-				LedOff(CYAN);
-				LedOff(GREEN);
-				LedOff(YELLOW);
-				LedOff(ORANGE);
-				LedOff(RED);
-			}
-			
-			u16TimeCounter=0;
-			u8PrintCounter++;
-			u8Index3++;
-			
+				
 			
 		}
 	}
