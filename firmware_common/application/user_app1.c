@@ -59,6 +59,9 @@ Variable names shall start with "UserApp1_" and be declared as static.
 ***********************************************************************************************************************/
 static fnCode_type UserApp1_StateMachine;            /* The state machine function pointer */
 //static u32 UserApp1_u32Timeout;                      /* Timeout counter used across states */
+static u8 au8StartTime[4];
+static u8 au8EndTime[4];
+static bool bRight=TRUE;
 
 
 /**********************************************************************************************************************
@@ -90,6 +93,7 @@ void UserApp1Initialize(void)
   	LedOff(RED);
 	LedOff(GREEN);
 	LCDCommand(LCD_CLEAR_CMD);
+	u8 au8ValidLed[]={'W','P','B','C','G','Y','O','R','w','p','b','c','g','y','o','r'};
  
   /* If good initialization, set state to Idle */
   if( 1 )
@@ -103,6 +107,39 @@ void UserApp1Initialize(void)
   }
 
 } /* end UserApp1Initialize() */
+
+static bool CheckCMDString(u8 *pu8CMDToCheck)
+{
+	u8 *pu8Passer;
+	pu8Passer=pu8CMDToCheck;
+	for(u8 i=0;i<sizeof(au8ValidLed);i++)
+	{
+		if(*pu8Passer=au8ValidLed[i])
+		{
+			pu8Passer++;
+			
+			if(*pu8Passer=='-')
+			{
+				pu8Passer++;
+				
+				for(u8 i=0;i<4;i++,pu8Passer++)
+				{
+					if(*pu8Passer!='-')
+					{
+				  		if((*pu8Passer>='0')&&(*pu8Passer<='9'))
+						{
+							au8StartTime[i]=*pu8Passer;
+						}
+						else
+						{
+							return 0;
+						}
+					}
+				}
+			}
+		}
+	}
+}
 
   
 /*----------------------------------------------------------------------------------------------------------------------
