@@ -159,7 +159,39 @@ static void UserApp1SM_Idle(void)
 					{
 						u32Counter++;
 						DebugLineFeed();
-						DebugPrintNumber(u32Counter);//output number
+						
+						if(u32Counter<10)
+						{
+							DebugPrintf("***");
+							DebugLineFeed();
+							DebugPrintf("*");
+							DebugPrintNumber(u32Counter);//output number
+							DebugPrintf("*");
+							DebugLineFeed();
+							DebugPrintf("***");
+						}
+						
+						if(u32Counter>=10&&u32Counter<100)
+						{
+							DebugPrintf("****");
+							DebugLineFeed();
+							DebugPrintf("*");
+							DebugPrintNumber(u32Counter);//output number
+							DebugPrintf("*");
+							DebugLineFeed();
+							DebugPrintf("****");
+						}
+						
+						if(u32Counter>=100&&u32Counter<1000)
+						{
+							DebugPrintf("*****");
+							DebugLineFeed();
+							DebugPrintf("*");
+							DebugPrintNumber(u32Counter);//output number
+							DebugPrintf("*");
+							DebugLineFeed();
+							DebugPrintf("*****");
+						}
 												
 					}
 				}
