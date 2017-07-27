@@ -136,7 +136,46 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+	static u8 u8TimerCounter;
+	static s8 s8Index=0;
+	static bool bUp=TRUE;
+	LedRateType eLedRate[]={LED_PWM_0, LED_PWM_5, LED_PWM_10, LED_PWM_15, LED_PWM_20, LED_PWM_25, LED_PWM_30, LED_PWM_35, LED_PWM_40, 
+	                        LED_PWM_45,LED_PWM_50, LED_PWM_55, LED_PWM_60, LED_PWM_65, LED_PWM_70,LED_PWM_75, LED_PWM_80, LED_PWM_85, 
+							LED_PWM_90, LED_PWM_95, LED_PWM_100};
+	
+	u8TimerCounter++;
+	
+	if(u8TimerCounter==2)//determine whether it is 2ms
+	{
+		if(bUp)//determine whether to rise or fall
+		{
+	  		if(s8Index<21)//determine whether to the highest point
+			{
+				LedPWM(RED,eLedRate[s8Index]);
+			}
+			else
+			{
+				bUp=FALSE;
+			}
+			
+			s8Index++;
+		}
+		else
+		{
+			if(s8Index>=0)//determine whether to the lowest point
+			{
+				LedPWM(RED,eLedRate[s8Index]);
+			}
+			else
+			{
+				bUp=TRUE;
+			}
+			
+			s8Index--;
+		}
+		
+		u8TimerCounter=0;
+	}
 } /* end UserApp1SM_Idle() */
     
 
