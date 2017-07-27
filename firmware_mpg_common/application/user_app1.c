@@ -100,6 +100,28 @@ void UserApp1Initialize(void)
 
 } /* end UserApp1Initialize() */
 
+/*static bool CheckCMDString(u8 *pu8CMDToCheck)
+{
+	u8 *pu8Passer;
+	u8 au8ValidLed[]={'W','P','B','C','G','Y','O','R','w','p','b','c','g','y','o','r'};
+	pu8Passer=pu8CMDToCheck;
+	
+	for(u8 i;i<sizeof(au8ValidLed);i++)
+	{
+		if(*pu8Passer==au8ValidLed[i])
+		{
+			pu8Passer++;
+			
+			if(pu8Passer=='-')
+			{
+				pu8Passer++;
+				
+				if()
+			}
+		}
+	}
+	
+}*/
   
 /*----------------------------------------------------------------------------------------------------------------------
 Function UserApp1RunActiveState()
@@ -135,7 +157,31 @@ State Machine Function Definitions
 /* Wait for input */
 static void UserApp1SM_Idle(void)
 {
-  
+  static u32 u32Time=0;
+	 LedCommandType aeUserList[] =
+  { /* The ON times */
+    {WHITE, 0, TRUE, LED_PWM_0},
+    {RED, 500, TRUE, LED_PWM_0},
+    {YELLOW, 0, TRUE, LED_PWM_0},
+    {YELLOW, 1000, TRUE, LED_PWM_0},
+    /* The OFF times */    
+    {WHITE, 2000, FALSE, LED_PWM_100},
+    {RED, 2000, FALSE, LED_PWM_100},
+    {YELLOW, 1000, FALSE, LED_PWM_100},
+    {YELLOW, 2000, FALSE, LED_PWM_100}
+  };
+
+  /* Build the command array */
+  if(u32Time==1000)
+  {
+ 	  for(u8 i = 0; i < (sizeof(aeUserList) / sizeof(LedCommandType)); i++)
+	  {
+		LedDisplayAddCommand(USER_LIST, &aeUserList[i]);
+		LedDisplayPrintListLine(i);
+	  }  
+	  
+	  u32Time=0;
+  }
 } /* end UserApp1SM_Idle() */
                       
             
