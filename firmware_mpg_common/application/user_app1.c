@@ -190,7 +190,6 @@ static void UserApp1SM_Idle(void)
 			{
 				u8OneOrTwo=1;
 				u32Num=1;
-				LedDisplayStartList();
 				DebugLineFeed();
 				DebugLineFeed();
 				DebugPrintf("Enter commands as LED-ONTIME-OFFTIME and press Enter");
@@ -262,6 +261,7 @@ static void UserApp1SM_Idle(void)
 								if(i==(u8CMDBit-1))
 								{
 									bIsRight=FALSE;
+									bContinueJudge=FALSE;
 								}
 							}
 						}
@@ -385,6 +385,8 @@ static void UserApp1SM_Idle(void)
 						u8CMDBit=0;
 						u8CMDNum++;
 						u32Num++;
+						u32StartTime=0;
+						u32EndTime=0;
 						DebugLineFeed(); 
 						DebugPrintNumber(u32Num);
 						DebugPrintf(":");
@@ -396,7 +398,11 @@ static void UserApp1SM_Idle(void)
 							au8Command[i]=0;
 						}
 						
+						aeUserList[2*u8CMDNum].u32Time=0;
+						aeUserList[2*u8CMDNum+1].u32Time=0;
 						u8CMDBit=0;
+						u32StartTime=0;
+						u32EndTime=0;
 						DebugLineFeed();
 						DebugPrintf("Invalid command: incorrect format. Please use L-ONTIME-OFFTIME");
 						DebugLineFeed();
@@ -412,6 +418,7 @@ static void UserApp1SM_Idle(void)
 	{
 	  	bWriteOrDisplay=FALSE;
 		u8OneOrTwo=0;
+		bPrint=TRUE;
 		DebugLineFeed();
 		
 		for(u8 i = 0; i < (2*u8CMDNum); i++)
