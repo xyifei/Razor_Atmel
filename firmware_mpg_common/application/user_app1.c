@@ -121,6 +121,107 @@ void UserApp1RunActiveState(void)
 
 } /* end UserApp1RunActiveState */
 
+bool bJudge(u8 *au8Command,u8 u8CMDBit)
+{
+    bool bIsRight=TRUE;
+    u8 u8EndTimeLogo=0;
+    bool bContinueJudge=TRUE;
+    u8 au8ValidLed[]={'W','P','B','C','G','Y','O','R','w','p','b','c','g','y','o','r'};
+    u32 u32StartTime=0;
+    u32 u32EndTime=0;
+    u32 u32Mul=1;
+    
+    if(au8Command[1]=='-')//determine whether the commond is correct
+    {
+        for(u8 i=2;i<u8CMDBit;i++)
+        {
+            if(au8Command[i]=='-')
+            {
+                u8EndTimeLogo=i;
+                bContinueJudge=TRUE;
+                break;
+            }
+            else
+            {
+                if(i==(u8CMDBit-1))
+                {
+                    bIsRight=FALSE;
+                    bContinueJudge=FALSE;
+                }
+            }
+        }
+        
+        if((au8Command[2]=='-')||(au8Command[u8EndTimeLogo+1]=='-'))
+        {
+            bIsRight=FALSE;
+        }
+        
+        if(bContinueJudge)
+        {
+            for(u8 i=0;i<sizeof(au8ValidLed);i++)
+            {
+                if(au8Command[0]==au8ValidLed[i])
+                {
+                    break;
+                }
+                else
+                {
+                    if(i==sizeof(au8ValidLed))
+                    {
+                        bIsRight=FALSE;
+                    }
+                }	
+            }
+            
+            for(u8 i=2;i<u8EndTimeLogo;i++)
+            {
+                if(au8Command[i]<48&&au8Command[i]>57)
+                {
+                    bIsRight=FALSE;
+                }
+            }
+            
+            for(u8 i=u8EndTimeLogo+1;i<u8CMDBit;i++)
+            {
+                if(au8Command[i]<48&&au8Command[i]>57)
+                {
+                    bIsRight=FALSE;
+                }
+            }
+            
+            for(u8 i=u8EndTimeLogo-1;i>1;i--)
+            {
+                u32StartTime=u32StartTime+(au8Command[i]-48)*u32Mul;
+                u32Mul=u32Mul*10;
+            }
+            
+            u32Mul=1;
+            
+            for(u8 i=u8CMDBit-1;i>u8EndTimeLogo;i--)
+            {
+                u32EndTime=u32EndTime+(au8Command[i]-48)*u32Mul;
+                u32Mul=u32Mul*10;
+            }
+            
+            u32Mul=1;
+            
+            if(u32StartTime>=u32EndTime)
+            {
+                bIsRight=FALSE;
+            }
+            
+            bContinueJudge=FALSE;
+        }
+        
+    }
+    else
+    {
+        bIsRight=FALSE;
+    }
+    
+    return bIsRight;
+}
+
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Private functions                                                                                                  */
@@ -135,7 +236,7 @@ State Machine Function Definitions
 /* Wait for input */
 static void UserApp1SM_Idle(void)
 {
-	static u8 au8Command[12];
+    static u8 au8Command[12];
 	static u8 au8EnterIn[]={0};
 	static u8 u8CMDBit=0;
 	static u8 u8CMDNum=0;
@@ -144,11 +245,8 @@ static void UserApp1SM_Idle(void)
 	static bool bPrint=TRUE;
 	static u8 u8OneOrTwo=0;
 	static u32 u32Mul=1;
-	static u32 u32StartTime=0;
-	static u32 u32EndTime=0;
 	static bool bIsRight=TRUE;
 	static u32 u32Num=1;
-	static bool bContinueJudge=FALSE;
 	LedNumberType eLedNum[]={WHITE, PURPLE, BLUE, CYAN, GREEN, YELLOW, ORANGE, RED};
 	u8 au8ValidLed[]={'W','P','B','C','G','Y','O','R','w','p','b','c','g','y','o','r'};
 	LedCommandType aeUserList[100];
@@ -188,7 +286,9 @@ static void UserApp1SM_Idle(void)
 			
 			if(au8EnterIn[0]=='1')
 			{
-				u8OneOrTwo=1;
+				LedDisplayStartList();
+                u8CMDNum=0;
+                u8OneOrTwo=1;
 				u32Num=1;
 				DebugLineFeed();
 				DebugLineFeed();
@@ -238,96 +338,15 @@ static void UserApp1SM_Idle(void)
 					u8OneOrTwo=0;
 				}
 				else
-				{
-					bIsRight=TRUE;
-					
-					if(u8CMDBit==2)
-					{
-						bIsRight=FALSE;
-					}
-					
-					if(au8Command[1]=='-')//determine whether the commond is correct
-					{
-					  	for(u8 i=2;i<u8CMDBit;i++)
-						{
-							if(au8Command[i]=='-')
-							{
-								u8EndTimeLogo=i;
-								bContinueJudge=TRUE;
-								break;
-							}
-							else
-							{
-								if(i==(u8CMDBit-1))
-								{
-									bIsRight=FALSE;
-									bContinueJudge=FALSE;
-								}
-							}
-						}
-						
-						if(bContinueJudge)
-						{
-							for(u8 i=0;i<sizeof(au8ValidLed);i++)
-							{
-								if(au8Command[0]==au8ValidLed[i])
-								{
-									break;
-								}
-								else
-								{
-									if(i==sizeof(au8ValidLed))
-									{
-										bIsRight=FALSE;
-									}
-								}	
-							}
-							
-							for(u8 i=2;i<u8EndTimeLogo;i++)
-							{
-								if(au8Command[i]<48&&au8Command[i]>57)
-								{
-									bIsRight=FALSE;
-								}
-							}
-							
-							for(u8 i=u8EndTimeLogo+1;i<u8CMDBit;i++)
-							{
-								if(au8Command[i]<48&&au8Command[i]>57)
-								{
-									bIsRight=FALSE;
-								}
-							}
-							
-							for(u8 i=u8EndTimeLogo-1;i>1;i--)
-							{
-								u32StartTime=u32StartTime+(au8Command[i]-48)*u32Mul;
-								u32Mul=u32Mul*10;
-							}
-							
-							u32Mul=1;
-							
-							for(u8 i=u8CMDBit-1;i>u8EndTimeLogo;i--)
-							{
-								u32EndTime=u32EndTime+(au8Command[i]-48)*u32Mul;
-								u32Mul=u32Mul*10;
-							}
-							
-							u32Mul=1;
-							
-							if(u32StartTime>=u32EndTime)
-							{
-								bIsRight=FALSE;
-							}
-							
-							bContinueJudge=FALSE;
-						}
-						
-					}
-					else
-					{
-						bIsRight=FALSE;
-					}
+				{     
+                    if(bJudge(au8Command,u8CMDBit))
+                    {
+                        bIsRight=TRUE;
+                    }
+                    else
+                    {
+                        bIsRight=FALSE;
+                    }
 					
 					if(bIsRight)//if commond is right, entering it to UserList
 					{
@@ -385,8 +404,6 @@ static void UserApp1SM_Idle(void)
 						u8CMDBit=0;
 						u8CMDNum++;
 						u32Num++;
-						u32StartTime=0;
-						u32EndTime=0;
 						DebugLineFeed(); 
 						DebugPrintNumber(u32Num);
 						DebugPrintf(":");
@@ -401,8 +418,6 @@ static void UserApp1SM_Idle(void)
 						aeUserList[2*u8CMDNum].u32Time=0;
 						aeUserList[2*u8CMDNum+1].u32Time=0;
 						u8CMDBit=0;
-						u32StartTime=0;
-						u32EndTime=0;
 						DebugLineFeed();
 						DebugPrintf("Invalid command: incorrect format. Please use L-ONTIME-OFFTIME");
 						DebugLineFeed();
@@ -418,14 +433,26 @@ static void UserApp1SM_Idle(void)
 	{
 	  	bWriteOrDisplay=FALSE;
 		u8OneOrTwo=0;
-		bPrint=TRUE;
 		DebugLineFeed();
 		
 		for(u8 i = 0; i < (2*u8CMDNum); i++)
 		{
 			LedDisplayAddCommand(USER_LIST, &aeUserList[i]);
 		}
-		
+        
+        DebugLineFeed();
+        DebugPrintf("Current USER program");
+        DebugLineFeed();
+        DebugPrintf("LED   ON TIME   OFF TIME");
+        DebugLineFeed();
+        DebugPrintf("------------------------");
+        DebugLineFeed();
+        
+        for(u8 i=0;i<u8CMDNum;i++)
+        {
+            LedDisplayPrintListLine(i);
+        }
+        
 		bWriteOrDisplay=TRUE;
 	}
 } /* end UserApp1SM_Idle() */
