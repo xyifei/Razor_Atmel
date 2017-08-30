@@ -166,7 +166,7 @@ bool bJudge(u8 *au8Command,u8 u8CMDBit)
                 }
                 else
                 {
-                    if(i==sizeof(au8ValidLed))
+                    if(i==(sizeof(au8ValidLed)-1))
                     {
                         bIsRight=FALSE;
                     }
@@ -286,7 +286,12 @@ static void UserApp1SM_Idle(void)
 			
 			if(au8EnterIn[0]=='1')
 			{
-				LedDisplayStartList();
+				for(u8 i=0;i<=(2*u8CMDNum);i++)
+                {
+                    aeUserList[i].u32Time=0;
+                }
+              
+                LedDisplayStartList();
                 u8CMDNum=0;
                 u8OneOrTwo=1;
 				u32Num=1;
@@ -303,7 +308,7 @@ static void UserApp1SM_Idle(void)
 				DebugPrintf("Press Enter on blank line to end");
 				DebugLineFeed();
 				DebugPrintNumber(u32Num);
-				DebugPrintf(":");	
+				DebugPrintf(":");
 			}
 			
 			if(au8EnterIn[0]=='2')
@@ -390,7 +395,6 @@ static void UserApp1SM_Idle(void)
 						}
 						
 						u32Mul=1;
-						
 						aeUserList[2*u8CMDNum].bOn=TRUE;
 						aeUserList[2*u8CMDNum].eCurrentRate=LED_PWM_0;
 						aeUserList[2*u8CMDNum+1].bOn=FALSE;
@@ -443,9 +447,9 @@ static void UserApp1SM_Idle(void)
         DebugLineFeed();
         DebugPrintf("Current USER program");
         DebugLineFeed();
-        DebugPrintf("LED   ON TIME   OFF TIME");
-        DebugLineFeed();
-        DebugPrintf("------------------------");
+        DebugPrintf("LED  ON TIME  OFF TIME");
+        DebugLineFeed();                   
+        DebugPrintf("----------------------");
         DebugLineFeed();
         
         for(u8 i=0;i<u8CMDNum;i++)
