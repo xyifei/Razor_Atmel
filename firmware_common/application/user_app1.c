@@ -52,6 +52,7 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern u8 G_u8DebugScanfCharCount;
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -87,6 +88,19 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+    static u8 au8Message[] = "STATE 1";
+    DebugPrintf("Entering state 1");
+    LCDMessage(7,au8Message);
+    LCDClearChars(LINE1_START_ADDR , 7);
+    LCDClearChars(14, 7);
+    LedOn(WHITE);
+    LedOn(PURPLE);
+    LedOn(BLUE);
+    LedOn(CYAN);
+    LedOn(LCD_RED);
+    LedOff(LCD_GREEN);
+    LedOn(LCD_BLUE);
+    PWMAudioSetFrequency(BUZZER2,200);
  
   /* If good initialization, set state to Idle */
   if( 1 )
@@ -136,7 +150,80 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+    static u8 au8EnterIn[]={0};
+    static u8 u8State=0;
+    static u32 u32TimeCounter=0;
+    
+    if(G_u8DebugScanfCharCount>=1)
+    {
+        DebugScanf(au8EnterIn);
+    }
+    
+    if(WasButtonPressed(BUTTON0)||au8EnterIn[0]=='1')
+    {
+        ButtonAcknowledge(BUTTON0);
+        u8State=1;
+        u8 au8State[]="STATE 1";
+        LCDMessage(7,au8State);
+        DebugPrintf("Entering state 1");
+        DebugLineFeed();
+        LCDClearChars(LINE1_START_ADDR , 7);
+        LCDClearChars(14, 7);
+        LedOn(WHITE);
+        LedOn(PURPLE);
+        LedOn(BLUE);
+        LedOn(CYAN);
+        LedOff(GREEN);
+        LedOff(YELLOW);
+        LedOff(ORANGE);
+        LedOff(RED);
+        LedOn(LCD_RED);
+        LedOff(LCD_GREEN);
+        LedOn(LCD_BLUE);
+        PWMAudioOff(BUZZER2);
+        au8EnterIn[0]=0;
+    }
+    
+    if(WasButtonPressed(BUTTON1)||au8EnterIn[0]=='2')
+    {
+        ButtonAcknowledge(BUTTON1);
+        u8State=2;
+        u8 au8State[]="STATE 2";
+        LCDMessage(7,au8State);
+        DebugPrintf("Entering state 2");
+        DebugLineFeed();
+        LedBlink(GREEN,LED_1HZ);
+        LedBlink(YELLOW,LED_2HZ);
+        LedBlink(ORANGE,LED_4HZ);
+        LedBlink(RED,LED_8HZ);
+        LedOff(WHITE);
+        LedOff(PURPLE);
+        LedOff(BLUE);
+        LedOff(CYAN);
+        LedPWM(LCD_RED,LED_PWM_100);
+        LedPWM(LCD_GREEN,LED_PWM_50);
+        LedOff(LCD_BLUE);
+        au8EnterIn[0]=0;
+    }
+    
+    if(u8State==2)
+    {
+        if(u32TimeCounter<=100)
+        {
+            PWMAudioOn(BUZZER2);
+        }
+        else
+        {
+            PWMAudioOff(BUZZER2);
+        }
+        
+        if(u32TimeCounter==1000)
+        {
+            u32TimeCounter=0;
+        }
+        
+        u32TimeCounter++;
+    }
 } /* end UserApp1SM_Idle() */
     
 
