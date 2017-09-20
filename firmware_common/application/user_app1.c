@@ -59,6 +59,11 @@ Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp1_" and be declared as static.
 ***********************************************************************************************************************/
 static fnCode_type UserApp1_StateMachine;            /* The state machine function pointer */
+
+static u8 u8EnterIn[2];
+static bool bOneOrTwo=TRUE;
+static bool bOn=TRUE;
+static bool bOpen=FALSE;
 //static u32 UserApp1_u32Timeout;                      /* Timeout counter used across states */
 
 
@@ -88,24 +93,24 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
-    static u8 au8Message[] = "STATE 1";
-    DebugPrintf("Entering state 1");
-    LCDMessage(7,au8Message);
-    LCDClearChars(LINE1_START_ADDR , 7);
-    LCDClearChars(14, 7);
-    LedOn(WHITE);
-    LedOn(PURPLE);
-    LedOn(BLUE);
-    LedOn(CYAN);
-    LedOn(LCD_RED);
+    LCDCommand(LCD_CLEAR_CMD);
+    LedOff(WHITE);
+    LedOff(PURPLE);
+    LedOff(BLUE);
+    LedOff(CYAN);
+    LedOff(GREEN);
+    LedOff(YELLOW);
+    LedOff(ORANGE);
+    LedOff(RED);
+    LedOff(LCD_RED);
     LedOff(LCD_GREEN);
-    LedOn(LCD_BLUE);
+    LedOff(LCD_BLUE);
     PWMAudioSetFrequency(BUZZER2,200);
  
   /* If good initialization, set state to Idle */
   if( 1 )
   {
-    UserApp1_StateMachine = UserApp1SM_Idle;
+    UserApp1_StateMachine = UserApp1SM_state1;  //Initial state
   }
   else
   {
@@ -148,27 +153,14 @@ State Machine Function Definitions
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Wait for ??? */
-static void UserApp1SM_Idle(void)
+static void UserApp1SM_state1(void)
 {
-    static u8 au8EnterIn[]={0};
-    static u8 u8State=0;
-    static u32 u32TimeCounter=0;
-    
-    if(G_u8DebugScanfCharCount>=1)
+    if(bOn)
     {
-        DebugScanf(au8EnterIn);
-    }
-    
-    if(WasButtonPressed(BUTTON0)||au8EnterIn[0]=='1')
-    {
-        ButtonAcknowledge(BUTTON0);
-        u8State=1;
-        u8 au8State[]="STATE 1";
-        LCDMessage(7,au8State);
+        LCDCommand(LCD_CLEAR_CMD);
+        LCDMessage(7,"STATE 1");
         DebugPrintf("Entering state 1");
         DebugLineFeed();
-        LCDClearChars(LINE1_START_ADDR , 7);
-        LCDClearChars(14, 7);
         LedOn(WHITE);
         LedOn(PURPLE);
         LedOn(BLUE);
@@ -181,15 +173,41 @@ static void UserApp1SM_Idle(void)
         LedOff(LCD_GREEN);
         LedOn(LCD_BLUE);
         PWMAudioOff(BUZZER2);
-        au8EnterIn[0]=0;
+        
+        bOn=FALSE;
     }
     
-    if(WasButtonPressed(BUTTON1)||au8EnterIn[0]=='2')
+    if(G_u8DebugScanfCharCount==2)//when you enter in two character
     {
-        ButtonAcknowledge(BUTTON1);
-        u8State=2;
-        u8 au8State[]="STATE 2";
-        LCDMessage(7,au8State);
+        DebugScanf(u8EnterIn);
+        
+        if((u8EnterIn[0]=='2')&&(u8EnterIn[1]=='\r'))
+        {
+            bOneOrTwo=FALSE;
+        }
+    }
+    
+    if(WasButtonPressed(BUTTON2))//judge whether button is pressed
+    {
+        ButtonAcknowledge(BUTTON2);
+        bOneOrTwo=FALSE;
+    }
+    
+    if(bOneOrTwo==FALSE)//change the state
+    {
+        bOn=TRUE;
+        UserApp1_StateMachine = UserApp1SM_state2;
+        bOpen=TRUE;
+    }
+}
+
+static void UserApp1SM_state2(void)
+{
+    static u16 u16TimeCounter=0;
+    
+    if(bOn)
+    {
+        LCDMessage(7,"STATE 2");
         DebugPrintf("Entering state 2");
         DebugLineFeed();
         LedBlink(GREEN,LED_1HZ);
@@ -203,27 +221,54 @@ static void UserApp1SM_Idle(void)
         LedPWM(LCD_RED,LED_PWM_100);
         LedPWM(LCD_GREEN,LED_PWM_50);
         LedOff(LCD_BLUE);
-        au8EnterIn[0]=0;
+        
+        bOn=FALSE;
     }
     
-    if(u8State==2)
+    if(bOpen)          //open the buzzer
     {
-        if(u32TimeCounter<=100)
+        if(u16TimeCounter==0)
         {
             PWMAudioOn(BUZZER2);
         }
-        else
+        
+        if(u16TimeCounter==100)
         {
             PWMAudioOff(BUZZER2);
         }
         
-        if(u32TimeCounter==1000)
+        if(u16TimeCounter==1000)
         {
-            u32TimeCounter=0;
+            PWMAudioOn(BUZZER2);
+            u16TimeCounter=0;
         }
         
-        u32TimeCounter++;
+        u16TimeCounter++;
     }
+    
+    if(G_u8DebugScanfCharCount==2)
+    {
+        DebugScanf(u8EnterIn);
+        
+        if((u8EnterIn[0]=='1')&&(u8EnterIn[1]=='\r'))
+        {
+            bOneOrTwo=TRUE;
+        }
+    }
+    
+    if(WasButtonPressed(BUTTON1))
+    {
+        ButtonAcknowledge(BUTTON1);
+        bOneOrTwo=TRUE;
+    }
+    
+    if(bOneOrTwo==TRUE)
+    {
+        bOn=TRUE;
+        UserApp1_StateMachine = UserApp1SM_state1;
+        bOpen=FALSE;
+    }
+    
 } /* end UserApp1SM_Idle() */
     
 

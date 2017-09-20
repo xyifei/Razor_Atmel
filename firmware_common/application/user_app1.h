@@ -42,6 +42,8 @@ Function Declarations
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
 /*--------------------------------------------------------------------------------------------------------------------*/
+static void UserApp1SM_state1(void);    
+static void UserApp1SM_state2(void);
 void UserApp1Initialize(void);
 void UserApp1RunActiveState(void);
 
