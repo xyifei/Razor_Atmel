@@ -200,6 +200,7 @@ static void UserApp1SM_Idle(void)
 {
   static u8 au8TestMessage[] = {0, 0, 0, 0, 0xA5, 0, 0, 0};
   u8 au8DataContent[] = "xxxxxxxxxxxxxxxx";
+  LedNumberType aeLedNum[]={WHITE, PURPLE, BLUE, CYAN, GREEN, YELLOW, ORANGE, RED};
   
   /* Check all the buttons and update au8TestMessage according to the button state */ 
   au8TestMessage[0] = 0x00;
@@ -241,7 +242,20 @@ static void UserApp1SM_Idle(void)
       }
 
 #ifdef EIE1
-      LCDMessage(LINE2_START_ADDR, au8DataContent);
+      DebugPrintf(au8DataContent);
+      
+      for(u8 i=0;i<8;i++)
+      {
+        if((au8DataContent[2*i]=='0')&&(au8DataContent[2*i+1]=='1'))
+        {
+            LedOn(aeLedNum[i]);
+        }
+        
+        if((au8DataContent[2*i]=='0')&&(au8DataContent[2*i+1]=='0'))
+        {
+            LedOff(aeLedNum[i]);
+        }
+      }
 #endif /* EIE1 */
       
 #ifdef MPG2
@@ -260,7 +274,7 @@ static void UserApp1SM_Idle(void)
           au8TestMessage[5]++;
         }
       }
-      AntQueueBroadcastMessage(ANT_CHANNEL_USERAPP, au8TestMessage);
+      AntQueueAcknowledgedMessage(ANT_CHANNEL_USERAPP, au8TestMessage);
     }
   } /* end AntReadData() */
   
