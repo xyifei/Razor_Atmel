@@ -43,7 +43,6 @@ All Global variable names shall start with "G_UserApp1"
 /* New variables */
 volatile u32 G_u32UserApp1Flags;                       /* Global state flags */
 
-
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
 extern u32 G_u32AntApiCurrentMessageTimeStamp;                    /* From ant_api.c */
@@ -198,36 +197,11 @@ static void UserApp1SM_AntChannelAssign()
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-  static u8 au8TestMessage[] = {0, 0, 0, 0, 0xA5, 0, 0, 0};
+  static u8 au8TestMessage[] = {0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
+  static u8 au8LCDContent[]="xxxxxxxxxxxxxxxx";
+  //static u8 au8LCDMessage[]={0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
   u8 au8DataContent[] = "xxxxxxxxxxxxxxxx";
   LedNumberType aeLedNum[]={WHITE, PURPLE, BLUE, CYAN, GREEN, YELLOW, ORANGE, RED};
-  
-  /* Check all the buttons and update au8TestMessage according to the button state */ 
-  au8TestMessage[0] = 0x00;
-  if( IsButtonPressed(BUTTON0) )
-  {
-    au8TestMessage[0] = 0xff;
-  }
-  
-  au8TestMessage[1] = 0x00;
-  if( IsButtonPressed(BUTTON1) )
-  {
-    au8TestMessage[1] = 0xff;
-  }
-
-#ifdef EIE1
-  au8TestMessage[2] = 0x00;
-  if( IsButtonPressed(BUTTON2) )
-  {
-    au8TestMessage[2] = 0xff;
-  }
-
-  au8TestMessage[3] = 0x00;
-  if( IsButtonPressed(BUTTON3) )
-  {
-    au8TestMessage[3] = 0xff;
-  }
-#endif /* EIE1 */
   
   if( AntReadAppMessageBuffer() )
   {
@@ -246,12 +220,12 @@ static void UserApp1SM_Idle(void)
       
       for(u8 i=0;i<8;i++)
       {
-        if((au8DataContent[2*i]=='0')&&(au8DataContent[2*i+1]=='1'))
+        if(G_au8AntApiCurrentMessageBytes[i]==0x01)
         {
             LedOn(aeLedNum[i]);
         }
         
-        if((au8DataContent[2*i]=='0')&&(au8DataContent[2*i+1]=='0'))
+        if(G_au8AntApiCurrentMessageBytes[i]==0x00)
         {
             LedOff(aeLedNum[i]);
         }
@@ -266,6 +240,7 @@ static void UserApp1SM_Idle(void)
     {
      /* Update and queue the new message data */
       au8TestMessage[7]++;
+      
       if(au8TestMessage[7] == 0)
       {
         au8TestMessage[6]++;
@@ -274,7 +249,47 @@ static void UserApp1SM_Idle(void)
           au8TestMessage[5]++;
         }
       }
+      
+      if(G_au8AntApiCurrentMessageBytes[ANT_TICK_MSG_EVENT_CODE_INDEX]==EVENT_TRANSFER_TX_FAILED)
+      {
+        au8TestMessage[3]++;
+        if(au8TestMessage[3] == 0)
+        {
+          au8TestMessage[2]++;
+          if(au8TestMessage[2] == 0)
+          {
+            au8TestMessage[1]++;
+          }
+        }
+      }
+      
+      for(u8 i = 0; i < ANT_DATA_BYTES; i++)
+      {
+        au8LCDContent[2 * i]     = (au8TestMessage[i] / 16);
+        au8LCDContent[2 * i + 1] = (au8TestMessage[i] % 16);
+        
+        if(au8LCDContent[2*i]<=9)
+        {
+            au8LCDContent[2*i]=au8LCDContent[2*i]+48;
+        }
+        else
+        {
+            au8LCDContent[2*i]=au8LCDContent[2*i]+55;
+        }
+        
+        if(au8LCDContent[2*i+1]<=9)
+        {
+            au8LCDContent[2*i+1]=au8LCDContent[2*i+1]+48;
+        }
+        else
+        {
+            au8LCDContent[2*i+1]=au8LCDContent[2*i+1]+55;
+        }
+      }
+      
+      LCDMessage(LINE2_START_ADDR, au8LCDContent);
       AntQueueAcknowledgedMessage(ANT_CHANNEL_USERAPP, au8TestMessage);
+
     }
   } /* end AntReadData() */
   
