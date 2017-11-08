@@ -31,10 +31,10 @@ Constants / Definitions
 /* Required constants for ANT channel configuration */
 #define ANT_CHANNEL_USERAPP             ANT_CHANNEL_0         /* Channel 0 - 7 */
 #define ANT_CHANNEL_TYPE_USERAPP        CHANNEL_TYPE_SLAVE    /* ANT SLAVE */
-#define ANT_DEVICEID_LO_USERAPP         (u8)0                 /* Low byte of two-byte Device # */
-#define ANT_DEVICEID_HI_USERAPP         (u8)0                 /* High byte of two-byte Device # */
-#define ANT_DEVICE_TYPE_USERAPP         (u8)0                 /* 1 - 255 */
-#define ANT_TRANSMISSION_TYPE_USERAPP   (u8)0                 /* 1-127 (MSB is pairing bit) */
+#define ANT_DEVICEID_LO_USERAPP         (u8)0xD7                /* Low byte of two-byte Device # */
+#define ANT_DEVICEID_HI_USERAPP         (u8)0x1F                /* High byte of two-byte Device # */
+#define ANT_DEVICE_TYPE_USERAPP         (u8)1                 /* 1 - 255 */
+#define ANT_TRANSMISSION_TYPE_USERAPP   (u8)1                /* 1-127 (MSB is pairing bit) */
 #define ANT_CHANNEL_PERIOD_LO_USERAPP   (u8)0x00              /* Low byte of two-byte channel period 0x0001 - 0x7fff */
 #define ANT_CHANNEL_PERIOD_HI_USERAPP   (u8)0x20              /* High byte of two-byte channel period */
 #define ANT_FREQUENCY_USERAPP           (u8)50                /* 2400MHz + this number 0 - 99 */
@@ -45,7 +45,8 @@ Constants / Definitions
 /* G_u32UserAppFlags */
 #define _CHANNEL_SYNCED                 0x00000001            /* Set when channel is synced */
 
-
+#define MASTER                          (bool)TRUE
+#define SLAVE                           (bool)FALSE
 /**********************************************************************************************************************
 Function Declarations
 **********************************************************************************************************************/
@@ -58,7 +59,8 @@ Function Declarations
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
 /*--------------------------------------------------------------------------------------------------------------------*/
-void UserApp1Initialize(void);
+void UserApp1Initialize_Slave(void);
+void UserApp1Initialize_Master(void);
 void UserApp1RunActiveState(void);
 
 
@@ -73,12 +75,16 @@ State Machine Declarations
 static void UserApp1SM_WaitChannelAssign(void);
 static void UserApp1SM_Idle(void);    
 static void UserApp1SM_WaitChannelOpen(void);
-static void UserApp1SM_ChannelOpen(void);
+static void UserApp1SM_ChannelOpen_Slave(void);
+static void UserApp1SM_ChannelOpen_Master(void);
 static void UserApp1SM_WaitChannelClose(void);
 
 static void UserApp1SM_Error(void);         
 static void UserApp1SM_FailedInit(void);        
 
+static void PrintSData(s8 s8Data);
+
+static void AllLedOff(void);
 
 #endif /* __USER_APP_H */
 
