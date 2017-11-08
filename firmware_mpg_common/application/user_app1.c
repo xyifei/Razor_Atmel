@@ -69,7 +69,7 @@ static u32 UserApp1_u32TickMsgCount = 0;             /* Counts the number of ANT
 static fnCode_type UserApp1_StateMachine;            /* The state machine function pointer */
 static u32 UserApp1_u32Timeout;                      /* Timeout counter used across states */
 
-static bool bMasterOrSlave = MASTER;
+static bool bMasterOrSlave = SLAVE;
 static bool bFinded=FALSE;
 
 /**********************************************************************************************************************
@@ -102,6 +102,8 @@ void UserApp1Initialize_Slave(void)
   u8 au8WelcomeMessage[] = "Hide and Go Seek!";
   u8 au8Instructions[] = "Press B0 to Start";
   AntAssignChannelInfoType sAntSetupData;
+  
+  PWMAudioSetFrequency(BUZZER1, 500);
   
   /* Clear screen and place start messages */
   LCDCommand(LCD_CLEAR_CMD);
@@ -136,9 +138,8 @@ void UserApp1Initialize_Slave(void)
     /* Channel assignment is queued so start timer */
     UserApp1_u32Timeout = G_u32SystemTime1ms;
     LedOn(RED);
-    bMasterOrSlave=SLAVE;
     
-    UserApp1_StateMachine = UserApp1SM_WaitChannelAssign;
+    UserApp1_StateMachine =UserApp1Initialize_Master;
   }
   else
   {
@@ -155,6 +156,8 @@ void UserApp1Initialize_Master(void)
   u8 au8WelcomeMessage[] = "Hide and Go Seek!";
   u8 au8Instructions[] = "Press B0 to Start";
   AntAssignChannelInfoType mAntSetupData;
+  
+  PWMAudioSetFrequency(BUZZER1, 500);
   
   /* Clear screen and place start messages */
   LCDCommand(LCD_CLEAR_CMD);
@@ -189,7 +192,6 @@ void UserApp1Initialize_Master(void)
     /* Channel assignment is queued so start timer */
     UserApp1_u32Timeout = G_u32SystemTime1ms;
     LedOn(RED);
-    bMasterOrSlave=MASTER;
     
     UserApp1_StateMachine = UserApp1SM_WaitChannelAssign;
   }
@@ -375,14 +377,9 @@ static void UserApp1SM_WaitChannelOpen_Master(void)
 /* Channel is open, so monitor data */
 static void UserApp1SM_ChannelOpen_Slave(void)
 {
-  static u8 u8LastState = 0xff;
-  static u8 au8TickMessage[] = "EVENT x\n\r";  /* "x" at index [6] will be replaced by the current code */
-  static u8 au8DataContent[] = "xxxxxxxxxxxxxxxx";
-  static u8 au8LastAntData[ANT_APPLICATION_MESSAGE_BYTES] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   static u8 au8TestMessage[] = {0, 0, 0, 0, 0xA5, 0, 0, 0};
   LedNumberType LedNum[]={WHITE, PURPLE, BLUE, CYAN, GREEN, YELLOW, ORANGE, RED};
   static s8 s8Rssi;
-  bool bGotNewData;
   
   /* Check for BUTTON0 to close channel */
   if(WasButtonPressed(BUTTON0))
@@ -395,7 +392,6 @@ static void UserApp1SM_ChannelOpen_Slave(void)
     
     /* Queue close channel and change LED to blinking green to indicate channel is closing */
     AntCloseChannelNumber(ANT_CHANNEL_SLAVE);
-    u8LastState = 0xff;
 
     LedOff(YELLOW);
     LedOff(BLUE);
@@ -436,135 +432,22 @@ static void UserApp1SM_ChannelOpen_Slave(void)
       
       if(s8Rssi==-42)
       {
-        au8TestMessage[0]=1;
-        LedOff(WHITE);
-        LedOff(PURPLE);
-        LedOff(BLUE);
-        LedOff(CYAN);
-        LedOff(GREEN);
-        LedOff(YELLOW);
-        LedOff(ORANGE);
-        LedOff(RED);
-        LCDCommand(LCD_CLEAR_CMD);
+        AllLedOff();
         bFinded=TRUE;
+        au8TestMessage[0]=1;
+        LCDCommand(LCD_CLEAR_CMD);
         LCDMessage(LINE1_START_ADDR,"Found you!" );
         AntQueueBroadcastMessage(ANT_CHANNEL_SLAVE,au8TestMessage);
         AntCloseChannelNumber(ANT_CHANNEL_SLAVE);
         UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
       }
       
-      /* We are synced with a device, so blue is solid */
-
-      /* Check if the new data is the same as the old data and update as we go */
-      bGotNewData = FALSE;
-      for(u8 i = 0; i < ANT_APPLICATION_MESSAGE_BYTES; i++)
-      {
-        if(G_au8AntApiCurrentMessageBytes[i] != au8LastAntData[i])
-        {
-          bGotNewData = TRUE;
-          au8LastAntData[i] = G_au8AntApiCurrentMessageBytes[i];
-
-          au8DataContent[2 * i]     = HexToASCIICharUpper(G_au8AntApiCurrentMessageBytes[i] / 16);
-          au8DataContent[2 * i + 1] = HexToASCIICharUpper(G_au8AntApiCurrentMessageBytes[i] % 16); 
-        }
-      }
-      
-      if(bGotNewData)
-      {
-        /* We got new data: show on LCD */
-        LCDClearChars(LINE2_START_ADDR, 20); 
-        LCDMessage(LINE2_START_ADDR, au8DataContent); 
-
-        /* Update our local message counter and send the message back */
-        au8TestMessage[7]++;
-        if(au8TestMessage[7] == 0)
-        {
-          au8TestMessage[6]++;
-          if(au8TestMessage[6] == 0)
-          {
-            au8TestMessage[5]++;
-          }
-        }
-        AntQueueBroadcastMessage(ANT_CHANNEL_SLAVE, au8TestMessage);
-
-        /* Check for a special packet and respond */
-        if(G_au8AntApiCurrentMessageBytes[0] == 0xA5)
-        {
-          LedOff(LCD_RED);
-          LedOff(LCD_GREEN);
-          LedOff(LCD_BLUE);
-          
-          if(G_au8AntApiCurrentMessageBytes[1] == 1)
-          {
-            LedOn(LCD_RED);
-          }
-          
-          if(G_au8AntApiCurrentMessageBytes[2] == 1)
-          {
-            LedOn(LCD_GREEN);
-          }
-
-          if(G_au8AntApiCurrentMessageBytes[3] == 1)
-          {
-            LedOn(LCD_BLUE);
-          }
-        }
-      } /* end if(bGotNewData) */
     } /* end if(G_eAntApiCurrentMessageClass == ANT_DATA) */
     
     else if(G_eAntApiCurrentMessageClass == ANT_TICK)
     {
-      UserApp1_u32TickMsgCount++;
-
-      /* Look at the TICK contents to check the event code and respond only if it's different */
-      if(u8LastState != G_au8AntApiCurrentMessageBytes[ANT_TICK_MSG_EVENT_CODE_INDEX])
-      {
-        /* The state changed so update u8LastState and queue a debug message */
-        u8LastState = G_au8AntApiCurrentMessageBytes[ANT_TICK_MSG_EVENT_CODE_INDEX];
-        au8TickMessage[6] = HexToASCIICharUpper(u8LastState);
-        DebugPrintf(au8TickMessage);
-
-        /* Parse u8LastState to update LED status */
-        switch (u8LastState)
-        {
-          /* If we are paired but missing messages, blue blinks */
-          case EVENT_RX_FAIL:
-          {
-            LedOff(GREEN);
-            LedBlink(BLUE, LED_2HZ);
-            break;
-          }
-
-          /* If we drop to search, LED is green */
-          case EVENT_RX_FAIL_GO_TO_SEARCH:
-          {
-            LedOff(BLUE);
-            LedOn(GREEN);
-            break;
-          }
-
-          /* If the search times out, the channel should automatically close */
-          case EVENT_RX_SEARCH_TIMEOUT:
-          {
-            DebugPrintf("Search timeout event\r\n");
-            break;
-          }
-
-          case EVENT_CHANNEL_CLOSED:
-          {
-            DebugPrintf("Channel closed event\r\n");
-            break;
-          }
-
-            default:
-          {
-            DebugPrintf("Unexpected Event\r\n");
-            break;
-          }
-        } /* end switch (G_au8AntApiCurrentMessageBytes) */
-      } /* end if (u8LastState != G_au8AntApiCurrentMessageBytes[ANT_TICK_MSG_EVENT_CODE_INDEX]) */
-    } /* end else if(G_eAntApiCurrentMessageClass == ANT_TICK) */
-    
+        UserApp1_u32TickMsgCount++;
+    }  
   } /* end AntReadAppMessageBuffer() */
   
   /* A slave channel can close on its own, so explicitly check channel status */
@@ -572,8 +455,6 @@ static void UserApp1SM_ChannelOpen_Slave(void)
   {
     LedBlink(GREEN, LED_2HZ);
     LedOff(BLUE);
-
-    u8LastState = 0xff;
     
     UserApp1_u32Timeout = G_u32SystemTime1ms;
     UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
@@ -584,9 +465,6 @@ static void UserApp1SM_ChannelOpen_Master(void)
 {
   static u8 au8TestMessage[] = {0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
   static u8 au8LCDContent[]="xxxxxxxxxxxxxxxx";
-  //static u8 au8LCDMessage[]={0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
-  u8 au8DataContent[] = "xxxxxxxxxxxxxxxx";
-  LedNumberType aeLedNum[]={WHITE, PURPLE, BLUE, CYAN, GREEN, YELLOW, ORANGE, RED};
   
   if( AntReadAppMessageBuffer() )
   {
@@ -594,26 +472,12 @@ static void UserApp1SM_ChannelOpen_Master(void)
     if(G_eAntApiCurrentMessageClass == ANT_DATA)
     {
       /* We got some data: parse it into au8DataContent[] */
-      for(u8 i = 0; i < ANT_DATA_BYTES; i++)
-      {
-        au8DataContent[2 * i]     = HexToASCIICharUpper(G_au8AntApiCurrentMessageBytes[i] / 16);
-        au8DataContent[2 * i + 1] = HexToASCIICharUpper(G_au8AntApiCurrentMessageBytes[i] % 16);
-      }
-
-      DebugPrintf(au8DataContent);
-      
-      for(u8 i=0;i<8;i++)
-      {
-        if(G_au8AntApiCurrentMessageBytes[i]==0x01)
+        if(G_au8AntApiCurrentMessageBytes[0]==0x01)
         {
-            LedOn(aeLedNum[i]);
+            LedBlink(BLUE,LED_PWM_35);
+            PWMAudioOn(BUZZER1);
+            LCDMessage(LINE1_START_ADDR,"You found me");
         }
-        
-        if(G_au8AntApiCurrentMessageBytes[i]==0x00)
-        {
-            LedOff(aeLedNum[i]);
-        }
-      }    
     }
     else if(G_eAntApiCurrentMessageClass == ANT_TICK)
     {
@@ -687,7 +551,7 @@ static void UserApp1SM_WaitChannelClose(void)
     {
         if(bFinded)
         {
-            UserApp1_StateMachine =  UserApp1Initialize_Master;
+            UserApp1_StateMachine =  UserApp1SM_Idle;
             bFinded=FALSE;
         }
         else
