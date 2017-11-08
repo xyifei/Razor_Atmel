@@ -70,6 +70,7 @@ static fnCode_type UserApp1_StateMachine;            /* The state machine functi
 static u32 UserApp1_u32Timeout;                      /* Timeout counter used across states */
 
 static bool bMasterOrSlave = MASTER;
+static bool bFinded=FALSE;
 
 /**********************************************************************************************************************
 Function Definitions
@@ -111,8 +112,8 @@ void UserApp1Initialize_Slave(void)
   LedOn(RED);
   
  /* Configure ANT for this application */
-  sAntSetupData.AntChannel          = ANT_CHANNEL_USERAPP;
-  sAntSetupData.AntChannelType      = ANT_CHANNEL_TYPE_USERAPP;
+  sAntSetupData.AntChannel          = ANT_CHANNEL_SLAVE;
+  sAntSetupData.AntChannelType      = ANT_CHANNEL_TYPE_SLAVE;
   sAntSetupData.AntChannelPeriodLo  = ANT_CHANNEL_PERIOD_LO_USERAPP;
   sAntSetupData.AntChannelPeriodHi  = ANT_CHANNEL_PERIOD_HI_USERAPP;
   
@@ -130,7 +131,6 @@ void UserApp1Initialize_Slave(void)
   }
     
   /* If good initialization, set state to Idle */
-  AntUnassignChannelNumber(ANT_CHANNEL_USERAPP);
   if( AntAssignChannel(&sAntSetupData) )
   {
     /* Channel assignment is queued so start timer */
@@ -165,8 +165,8 @@ void UserApp1Initialize_Master(void)
   LedOn(RED);
   
  /* Configure ANT for this application */
-  mAntSetupData.AntChannel          = ANT_CHANNEL_USERAPP;
-  mAntSetupData.AntChannelType      = ANT_CHANNEL_TYPE_USERAPP;
+  mAntSetupData.AntChannel          = ANT_CHANNEL_MASTER;
+  mAntSetupData.AntChannelType      = ANT_CHANNEL_TYPE_MASTER;
   mAntSetupData.AntChannelPeriodLo  = ANT_CHANNEL_PERIOD_LO_USERAPP;
   mAntSetupData.AntChannelPeriodHi  = ANT_CHANNEL_PERIOD_HI_USERAPP;
   
@@ -184,7 +184,6 @@ void UserApp1Initialize_Master(void)
   }
     
   /* If good initialization, set state to Idle */
-  AntUnassignChannelNumber(ANT_CHANNEL_USERAPP);
   if( AntAssignChannel(&mAntSetupData) )
   {
     /* Channel assignment is queued so start timer */
@@ -258,8 +257,16 @@ State Machine Function Definitions
 /* Wait for the ANT channel assignment to finish */
 static void UserApp1SM_WaitChannelAssign(void)
 {
-  /* Check if the channel assignment is complete */
-  if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) == ANT_CONFIGURED)
+  /* Check if the channel assignment is complete */  
+  if(AntRadioStatusChannel(ANT_CHANNEL_SLAVE) == ANT_CONFIGURED)
+  {
+    LedOff(RED);
+    LedOn(YELLOW);
+
+    UserApp1_StateMachine = UserApp1SM_Idle;
+  }
+  
+  if(AntRadioStatusChannel(ANT_CHANNEL_MASTER) == ANT_CONFIGURED)
   {
     LedOff(RED);
     LedOn(YELLOW);
@@ -291,23 +298,25 @@ static void UserApp1SM_Idle(void)
     {
         LCDCommand(LCD_CLEAR_CMD);
         LCDMessage(LINE1_START_ADDR, "Seeker"); 
+        AntOpenChannelNumber(ANT_CHANNEL_SLAVE);
+        
+        UserApp1_u32Timeout = G_u32SystemTime1ms;
+        UserApp1_StateMachine = UserApp1SM_WaitChannelOpen_Slave;
     }
     
     if(bMasterOrSlave==MASTER)
     {
         LCDCommand(LCD_CLEAR_CMD);
         LCDMessage(LINE1_START_ADDR, "Hide!"); 
+        AntOpenChannelNumber(ANT_CHANNEL_MASTER);
+            
+        UserApp1_u32Timeout = G_u32SystemTime1ms;
+        UserApp1_StateMachine = UserApp1SM_WaitChannelOpen_Master;
     }
     
     /* Queue open channel and change LED0 from yellow to blinking green to indicate channel is opening */
-    AntOpenChannelNumber(ANT_CHANNEL_USERAPP);
-
     LedOff(YELLOW);
     LedBlink(GREEN, LED_2HZ);
-    
-    /* Set timer and advance states */
-    UserApp1_u32Timeout = G_u32SystemTime1ms;
-    UserApp1_StateMachine = UserApp1SM_WaitChannelOpen;
   }
     
 } /* end UserApp1SM_Idle() */
@@ -315,29 +324,21 @@ static void UserApp1SM_Idle(void)
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Wait for channel to open */
-static void UserApp1SM_WaitChannelOpen(void)
+static void UserApp1SM_WaitChannelOpen_Slave(void)
 {
   /* Monitor the channel status to check if channel is opened */
-  if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) == ANT_OPEN)
+  if(AntRadioStatusChannel(ANT_CHANNEL_SLAVE) == ANT_OPEN)
   {
     LedOn(GREEN);
     LCDMessage(LINE1_START_ADDR, "Ready or not?"); 
     
-    if(bMasterOrSlave==SLAVE)
-    {
-        UserApp1_StateMachine = UserApp1SM_ChannelOpen_Slave;
-    }
-    
-    if(bMasterOrSlave==MASTER)
-    {
-        UserApp1_StateMachine = UserApp1SM_ChannelOpen_Master;
-    }
+    UserApp1_StateMachine = UserApp1SM_ChannelOpen_Slave;      
   }
-  
+
   /* Check for timeout */
   if( IsTimeUp(&UserApp1_u32Timeout, TIMEOUT_VALUE) )
   {
-    AntCloseChannelNumber(ANT_CHANNEL_USERAPP);
+    AntCloseChannelNumber(ANT_CHANNEL_SLAVE);
 
     LedOff(GREEN);
     LedOn(YELLOW);
@@ -347,6 +348,28 @@ static void UserApp1SM_WaitChannelOpen(void)
     
 } /* end UserApp1SM_WaitChannelOpen() */
 
+static void UserApp1SM_WaitChannelOpen_Master(void)
+{
+  /* Monitor the channel status to check if channel is opened */
+  if(AntRadioStatusChannel(ANT_CHANNEL_MASTER) == ANT_OPEN)
+  {
+    LedOn(GREEN);
+    
+    UserApp1_StateMachine = UserApp1SM_ChannelOpen_Master;      
+  }
+  
+  /* Check for timeout */
+  if( IsTimeUp(&UserApp1_u32Timeout, TIMEOUT_VALUE) )
+  {
+    AntCloseChannelNumber(ANT_CHANNEL_MASTER);
+
+    LedOff(GREEN);
+    LedOn(YELLOW);
+    
+    UserApp1_StateMachine = UserApp1SM_Idle;
+  }
+    
+} /* end UserApp1SM_WaitChannelOpen() */
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Channel is open, so monitor data */
@@ -371,7 +394,7 @@ static void UserApp1SM_ChannelOpen_Slave(void)
     LCDMessage(LINE1_START_ADDR, "Seeker"); 
     
     /* Queue close channel and change LED to blinking green to indicate channel is closing */
-    AntCloseChannelNumber(ANT_CHANNEL_USERAPP);
+    AntCloseChannelNumber(ANT_CHANNEL_SLAVE);
     u8LastState = 0xff;
 
     LedOff(YELLOW);
@@ -413,6 +436,7 @@ static void UserApp1SM_ChannelOpen_Slave(void)
       
       if(s8Rssi==-42)
       {
+        au8TestMessage[0]=1;
         LedOff(WHITE);
         LedOff(PURPLE);
         LedOff(BLUE);
@@ -422,8 +446,10 @@ static void UserApp1SM_ChannelOpen_Slave(void)
         LedOff(ORANGE);
         LedOff(RED);
         LCDCommand(LCD_CLEAR_CMD);
+        bFinded=TRUE;
         LCDMessage(LINE1_START_ADDR,"Found you!" );
-        AntCloseChannelNumber(ANT_CHANNEL_USERAPP);
+        AntQueueBroadcastMessage(ANT_CHANNEL_SLAVE,au8TestMessage);
+        AntCloseChannelNumber(ANT_CHANNEL_SLAVE);
         UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
       }
       
@@ -459,7 +485,7 @@ static void UserApp1SM_ChannelOpen_Slave(void)
             au8TestMessage[5]++;
           }
         }
-        AntQueueBroadcastMessage(ANT_CHANNEL_USERAPP, au8TestMessage);
+        AntQueueBroadcastMessage(ANT_CHANNEL_SLAVE, au8TestMessage);
 
         /* Check for a special packet and respond */
         if(G_au8AntApiCurrentMessageBytes[0] == 0xA5)
@@ -542,7 +568,7 @@ static void UserApp1SM_ChannelOpen_Slave(void)
   } /* end AntReadAppMessageBuffer() */
   
   /* A slave channel can close on its own, so explicitly check channel status */
-  if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) != ANT_OPEN)
+  if(AntRadioStatusChannel(ANT_CHANNEL_SLAVE) != ANT_OPEN)
   {
     LedBlink(GREEN, LED_2HZ);
     LedOff(BLUE);
@@ -551,13 +577,100 @@ static void UserApp1SM_ChannelOpen_Slave(void)
     
     UserApp1_u32Timeout = G_u32SystemTime1ms;
     UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
-  } /* if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) != ANT_OPEN) */
-      
-} /* end UserApp1SM_ChannelOpen() */
+  } /* if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) != ANT_OPEN) */     
+}
 
 static void UserApp1SM_ChannelOpen_Master(void)
 {
+  static u8 au8TestMessage[] = {0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
+  static u8 au8LCDContent[]="xxxxxxxxxxxxxxxx";
+  //static u8 au8LCDMessage[]={0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
+  u8 au8DataContent[] = "xxxxxxxxxxxxxxxx";
+  LedNumberType aeLedNum[]={WHITE, PURPLE, BLUE, CYAN, GREEN, YELLOW, ORANGE, RED};
+  
+  if( AntReadAppMessageBuffer() )
+  {
+     /* New message from ANT task: check what it is */
+    if(G_eAntApiCurrentMessageClass == ANT_DATA)
+    {
+      /* We got some data: parse it into au8DataContent[] */
+      for(u8 i = 0; i < ANT_DATA_BYTES; i++)
+      {
+        au8DataContent[2 * i]     = HexToASCIICharUpper(G_au8AntApiCurrentMessageBytes[i] / 16);
+        au8DataContent[2 * i + 1] = HexToASCIICharUpper(G_au8AntApiCurrentMessageBytes[i] % 16);
+      }
 
+      DebugPrintf(au8DataContent);
+      
+      for(u8 i=0;i<8;i++)
+      {
+        if(G_au8AntApiCurrentMessageBytes[i]==0x01)
+        {
+            LedOn(aeLedNum[i]);
+        }
+        
+        if(G_au8AntApiCurrentMessageBytes[i]==0x00)
+        {
+            LedOff(aeLedNum[i]);
+        }
+      }    
+    }
+    else if(G_eAntApiCurrentMessageClass == ANT_TICK)
+    {
+     /* Update and queue the new message data */
+      au8TestMessage[7]++;
+      
+      if(au8TestMessage[7] == 0)
+      {
+        au8TestMessage[6]++;
+        if(au8TestMessage[6] == 0)
+        {
+          au8TestMessage[5]++;
+        }
+      }
+      
+      if(G_au8AntApiCurrentMessageBytes[ANT_TICK_MSG_EVENT_CODE_INDEX]==EVENT_TRANSFER_TX_FAILED)
+      {
+        au8TestMessage[3]++;
+        if(au8TestMessage[3] == 0)
+        {
+          au8TestMessage[2]++;
+          if(au8TestMessage[2] == 0)
+          {
+            au8TestMessage[1]++;
+          }
+        }
+      }
+      
+      for(u8 i = 0; i < ANT_DATA_BYTES; i++)
+      {
+        au8LCDContent[2 * i]     = (au8TestMessage[i] / 16);
+        au8LCDContent[2 * i + 1] = (au8TestMessage[i] % 16);
+        
+        if(au8LCDContent[2*i]<=9)
+        {
+            au8LCDContent[2*i]=au8LCDContent[2*i]+48;
+        }
+        else
+        {
+            au8LCDContent[2*i]=au8LCDContent[2*i]+55;
+        }
+        
+        if(au8LCDContent[2*i+1]<=9)
+        {
+            au8LCDContent[2*i+1]=au8LCDContent[2*i+1]+48;
+        }
+        else
+        {
+            au8LCDContent[2*i+1]=au8LCDContent[2*i+1]+55;
+        }
+      }
+      
+      LCDMessage(LINE2_START_ADDR, au8LCDContent);
+      AntQueueAcknowledgedMessage(ANT_CHANNEL_MASTER, au8TestMessage);
+
+    }
+  } /* end AntReadData() */
 }
 
 /*-------------------------------------------------------------------------------------------------------------------*/
@@ -565,14 +678,22 @@ static void UserApp1SM_ChannelOpen_Master(void)
 static void UserApp1SM_WaitChannelClose(void)
 {
   /* Monitor the channel status to check if channel is closed */
-  if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) == ANT_CLOSED)
+  if(AntRadioStatusChannel(ANT_CHANNEL_SLAVE) == ANT_CLOSED)
   {
     LedOff(GREEN);
     LedOn(YELLOW);
     
     if(bMasterOrSlave==SLAVE)
     {
-        UserApp1_StateMachine =  UserApp1Initialize_Master;
+        if(bFinded)
+        {
+            UserApp1_StateMachine =  UserApp1Initialize_Master;
+            bFinded=FALSE;
+        }
+        else
+        {
+            UserApp1_StateMachine = UserApp1SM_Idle;
+        }
     }
   }
   
