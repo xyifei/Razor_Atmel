@@ -99,7 +99,7 @@
       <WATCH_2>
         <expressions>
           
-        <item>UserApp_u32DataMsgCount</item><item>UserApp_u32TickMsgCount</item><item></item></expressions>
+        <item>UserApp_u32DataMsgCount</item><item>UserApp_u32TickMsgCount</item><item/></expressions>
         <col-names>
           
           
@@ -133,7 +133,7 @@
       <WATCH_4>
         <expressions>
           
-        <item>Ant_au8AntRxBuffer</item><item></item></expressions>
+        <item>Ant_au8AntRxBuffer</item><item/></expressions>
         <col-names>
           
           
