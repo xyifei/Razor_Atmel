@@ -137,9 +137,10 @@ void UserApp1Initialize_Slave(void)
   {
     /* Channel assignment is queued so start timer */
     UserApp1_u32Timeout = G_u32SystemTime1ms;
+    bMasterOrSlave = SLAVE;
     LedOn(RED);
     
-    UserApp1_StateMachine =UserApp1Initialize_Master;
+    UserApp1_StateMachine = UserApp1SM_WaitChannelAssign;
   }
   else
   {
@@ -191,6 +192,7 @@ void UserApp1Initialize_Master(void)
   {
     /* Channel assignment is queued so start timer */
     UserApp1_u32Timeout = G_u32SystemTime1ms;
+    bMasterOrSlave = MASTER;
     LedOn(RED);
     
     UserApp1_StateMachine = UserApp1SM_WaitChannelAssign;
@@ -399,7 +401,7 @@ static void UserApp1SM_ChannelOpen_Slave(void)
     
     /* Set timer and advance states */
     UserApp1_u32Timeout = G_u32SystemTime1ms;
-    UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
+    UserApp1_StateMachine = UserApp1SM_WaitChannelClose_Slave;
   } /* end if(WasButtonPressed(BUTTON0)) */
   
   /* Always check for ANT messages */
@@ -439,7 +441,7 @@ static void UserApp1SM_ChannelOpen_Slave(void)
         LCDMessage(LINE1_START_ADDR,"Found you!" );
         AntQueueBroadcastMessage(ANT_CHANNEL_SLAVE,au8TestMessage);
         AntCloseChannelNumber(ANT_CHANNEL_SLAVE);
-        UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
+        UserApp1_StateMachine = UserApp1SM_WaitChannelClose_Slave;
       }
       
     } /* end if(G_eAntApiCurrentMessageClass == ANT_DATA) */
@@ -457,14 +459,13 @@ static void UserApp1SM_ChannelOpen_Slave(void)
     LedOff(BLUE);
     
     UserApp1_u32Timeout = G_u32SystemTime1ms;
-    UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
+    UserApp1_StateMachine = UserApp1SM_WaitChannelClose_Slave;
   } /* if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) != ANT_OPEN) */     
 }
 
 static void UserApp1SM_ChannelOpen_Master(void)
 {
   static u8 au8TestMessage[] = {0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
-  static u8 au8LCDContent[]="xxxxxxxxxxxxxxxx";
   
   if( AntReadAppMessageBuffer() )
   {
@@ -474,9 +475,13 @@ static void UserApp1SM_ChannelOpen_Master(void)
       /* We got some data: parse it into au8DataContent[] */
         if(G_au8AntApiCurrentMessageBytes[0]==0x01)
         {
-            LedBlink(BLUE,LED_PWM_35);
-            PWMAudioOn(BUZZER1);
-            LCDMessage(LINE1_START_ADDR,"You found me");
+            bFinded=TRUE;
+            AllLedOff();
+            LedOn(ORANGE);
+            AntCloseChannelNumber(ANT_CHANNEL_MASTER);
+            
+            UserApp1_u32Timeout = G_u32SystemTime1ms;
+            UserApp1_StateMachine = UserApp1SM_WaitChannelClose_Master;
         }
     }
     else if(G_eAntApiCurrentMessageClass == ANT_TICK)
@@ -493,44 +498,6 @@ static void UserApp1SM_ChannelOpen_Master(void)
         }
       }
       
-      if(G_au8AntApiCurrentMessageBytes[ANT_TICK_MSG_EVENT_CODE_INDEX]==EVENT_TRANSFER_TX_FAILED)
-      {
-        au8TestMessage[3]++;
-        if(au8TestMessage[3] == 0)
-        {
-          au8TestMessage[2]++;
-          if(au8TestMessage[2] == 0)
-          {
-            au8TestMessage[1]++;
-          }
-        }
-      }
-      
-      for(u8 i = 0; i < ANT_DATA_BYTES; i++)
-      {
-        au8LCDContent[2 * i]     = (au8TestMessage[i] / 16);
-        au8LCDContent[2 * i + 1] = (au8TestMessage[i] % 16);
-        
-        if(au8LCDContent[2*i]<=9)
-        {
-            au8LCDContent[2*i]=au8LCDContent[2*i]+48;
-        }
-        else
-        {
-            au8LCDContent[2*i]=au8LCDContent[2*i]+55;
-        }
-        
-        if(au8LCDContent[2*i+1]<=9)
-        {
-            au8LCDContent[2*i+1]=au8LCDContent[2*i+1]+48;
-        }
-        else
-        {
-            au8LCDContent[2*i+1]=au8LCDContent[2*i+1]+55;
-        }
-      }
-      
-      LCDMessage(LINE2_START_ADDR, au8LCDContent);
       AntQueueAcknowledgedMessage(ANT_CHANNEL_MASTER, au8TestMessage);
 
     }
@@ -539,7 +506,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Wait for channel to close */
-static void UserApp1SM_WaitChannelClose(void)
+static void UserApp1SM_WaitChannelClose_Slave(void)
 {
   /* Monitor the channel status to check if channel is closed */
   if(AntRadioStatusChannel(ANT_CHANNEL_SLAVE) == ANT_CLOSED)
@@ -551,8 +518,17 @@ static void UserApp1SM_WaitChannelClose(void)
     {
         if(bFinded)
         {
-            UserApp1_StateMachine =  UserApp1SM_Idle;
-            bFinded=FALSE;
+            if(AntRadioStatusChannel(ANT_CHANNEL_MASTER) == ANT_CONFIGURED)
+            {
+                bMasterOrSlave=MASTER;
+                UserApp1_StateMachine = UserApp1SM_Idle;
+            }
+            else
+            {
+                UserApp1_StateMachine = UserApp1Initialize_Master;     
+            }
+            
+            bFinded=FALSE;            
         }
         else
         {
@@ -560,7 +536,7 @@ static void UserApp1SM_WaitChannelClose(void)
         }
     }
   }
-  
+ 
   /* Check for timeout */
   if( IsTimeUp(&UserApp1_u32Timeout, TIMEOUT_VALUE) )
   {
@@ -573,6 +549,46 @@ static void UserApp1SM_WaitChannelClose(void)
     
 } /* end UserApp1SM_WaitChannelClose() */
 
+static void UserApp1SM_WaitChannelClose_Master(void)
+{
+  AllLedOff();
+  if(AntRadioStatusChannel(ANT_CHANNEL_MASTER) == ANT_CLOSED)
+  {
+    LedOff(GREEN);
+    LedOn(YELLOW);
+    
+    if(bMasterOrSlave==MASTER)
+    {
+      if(bFinded)
+      {
+        if(AntRadioStatusChannel(ANT_CHANNEL_SLAVE) == ANT_CONFIGURED)
+        {
+          bMasterOrSlave=SLAVE;
+          UserApp1_StateMachine = UserApp1SM_Idle;
+        }
+        else
+        {
+          UserApp1_StateMachine = UserApp1Initialize_Slave;     
+        }
+        
+        bFinded=FALSE;            
+      }
+      else
+      {
+        UserApp1_StateMachine = UserApp1SM_Idle;
+      }
+    }
+  }
+  
+  if( IsTimeUp(&UserApp1_u32Timeout, TIMEOUT_VALUE) )
+  {
+    LedOff(GREEN);
+    LedOff(YELLOW);
+    LedBlink(RED, LED_4HZ);
+    
+    UserApp1_StateMachine = UserApp1SM_Error;
+  }
+}
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Handle an error */
