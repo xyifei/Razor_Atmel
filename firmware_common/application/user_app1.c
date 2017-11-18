@@ -136,7 +136,16 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+   /* if((AT91C_BASE_PIOA->PIO_PDSR&0x00020000)==0)
+    {
+        AT91C_BASE_PIOB->PIO_SODR=0x00100000;
+        AT91C_BASE_PIOB->PIO_ODSR=0x00000000;
+    }
+    else
+    {
+        AT91C_BASE_PIOB->PIO_SODR=0x00000000;
+        AT91C_BASE_PIOB->PIO_ODSR=0x00100000;
+    }*/
 } /* end UserApp1SM_Idle() */
     
 
