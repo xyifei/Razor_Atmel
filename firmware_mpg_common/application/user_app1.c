@@ -227,6 +227,7 @@ static void AllLedOff(void)
     LedOff(ORANGE);
     LedOff(RED);
 }
+
 /*----------------------------------------------------------------------------------------------------------------------
 Function UserApp1RunActiveState()
 
@@ -382,6 +383,23 @@ static void UserApp1SM_ChannelOpen_Slave(void)
   static u8 au8TestMessage[] = {0, 0, 0, 0, 0xA5, 0, 0, 0};
   LedNumberType LedNum[]={WHITE, PURPLE, BLUE, CYAN, GREEN, YELLOW, ORANGE, RED};
   static s8 s8Rssi;
+  static u16 u16delay=0;
+  static bool bsign=FALSE;
+  
+  if(bsign)
+  {
+     u16delay++;
+     if(u16delay>=2000)
+     {
+        bsign=FALSE;
+        u16delay=0;
+        AntCloseChannelNumber(ANT_CHANNEL_SLAVE);
+ 
+        UserApp1_u32Timeout = G_u32SystemTime1ms;
+        UserApp1_StateMachine = UserApp1SM_WaitChannelClose_Slave;
+     }
+     return;    
+  }
   
   /* Check for BUTTON0 to close channel */
   if(WasButtonPressed(BUTTON0))
@@ -432,21 +450,29 @@ static void UserApp1SM_ChannelOpen_Slave(void)
         }
       }
       
-      if(s8Rssi==-42)
+      if(s8Rssi>=-50)
       {
         AllLedOff();
         bFinded=TRUE;
+        LedBlink(WHITE,LED_4HZ);
+        LedBlink(PURPLE,LED_4HZ);
+        LedBlink(BLUE,LED_4HZ);
+        LedBlink(CYAN,LED_4HZ);
+        LedBlink(GREEN,LED_4HZ);
+        LedBlink(YELLOW,LED_4HZ);
+        LedBlink(ORANGE,LED_4HZ);
+        LedBlink(RED,LED_4HZ);
         au8TestMessage[0]=1;
+        PWMAudioOn(BUZZER1);
+        AntQueueBroadcastMessage(ANT_CHANNEL_SLAVE,au8TestMessage);
         LCDCommand(LCD_CLEAR_CMD);
         LCDMessage(LINE1_START_ADDR,"Found you!" );
-        AntQueueBroadcastMessage(ANT_CHANNEL_SLAVE,au8TestMessage);
-        AntCloseChannelNumber(ANT_CHANNEL_SLAVE);
-        UserApp1_StateMachine = UserApp1SM_WaitChannelClose_Slave;
+        bsign=TRUE;
       }
       
     } /* end if(G_eAntApiCurrentMessageClass == ANT_DATA) */
     
-    else if(G_eAntApiCurrentMessageClass == ANT_TICK)
+     else if(G_eAntApiCurrentMessageClass == ANT_TICK)
     {
         UserApp1_u32TickMsgCount++;
     }  
@@ -466,6 +492,44 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 static void UserApp1SM_ChannelOpen_Master(void)
 {
   static u8 au8TestMessage[] = {0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
+  static u16 u16delay=0;
+  static bool bsign=FALSE;
+  
+  if(bsign)
+  {
+     u16delay++;
+     if(u16delay>=2000)
+     {
+        bsign=FALSE;
+        u16delay=0;
+        AntCloseChannelNumber(ANT_CHANNEL_MASTER);
+        
+        UserApp1_u32Timeout = G_u32SystemTime1ms;
+        UserApp1_StateMachine = UserApp1SM_WaitChannelClose_Master;
+     }
+     return;    
+  }
+  
+  if(WasButtonPressed(BUTTON0))
+  {
+    /* Got the button, so complete one-time actions before next state */
+    ButtonAcknowledge(BUTTON0);
+    AllLedOff();
+    LCDCommand(LCD_CLEAR_CMD);
+    LCDMessage(LINE1_START_ADDR, "Hide!"); 
+    
+    /* Queue close channel and change LED to blinking green to indicate channel is closing */
+    AntCloseChannelNumber(ANT_CHANNEL_MASTER);
+
+    LedOff(YELLOW);
+    LedOff(BLUE);
+    LedBlink(GREEN, LED_2HZ);
+    
+    /* Set timer and advance states */
+    UserApp1_u32Timeout = G_u32SystemTime1ms;
+    UserApp1_StateMachine = UserApp1SM_WaitChannelClose_Master;
+  } /* end if(WasButtonPressed(BUTTON0)) */
+  
   
   if( AntReadAppMessageBuffer() )
   {
@@ -477,11 +541,10 @@ static void UserApp1SM_ChannelOpen_Master(void)
         {
             bFinded=TRUE;
             AllLedOff();
-            LedOn(ORANGE);
-            AntCloseChannelNumber(ANT_CHANNEL_MASTER);
-            
-            UserApp1_u32Timeout = G_u32SystemTime1ms;
-            UserApp1_StateMachine = UserApp1SM_WaitChannelClose_Master;
+            LedBlink(ORANGE,LED_1HZ);
+            LCDCommand(LCD_CLEAR_CMD);
+            LCDMessage(LINE1_START_ADDR,"You found me!" );
+            bsign=TRUE;
         }
     }
     else if(G_eAntApiCurrentMessageClass == ANT_TICK)
@@ -508,11 +571,13 @@ static void UserApp1SM_ChannelOpen_Master(void)
 /* Wait for channel to close */
 static void UserApp1SM_WaitChannelClose_Slave(void)
 {
+  AllLedOff();
   /* Monitor the channel status to check if channel is closed */
   if(AntRadioStatusChannel(ANT_CHANNEL_SLAVE) == ANT_CLOSED)
   {
     LedOff(GREEN);
     LedOn(YELLOW);
+    PWMAudioOff(BUZZER1);
     
     if(bMasterOrSlave==SLAVE)
     {
@@ -520,6 +585,8 @@ static void UserApp1SM_WaitChannelClose_Slave(void)
         {
             if(AntRadioStatusChannel(ANT_CHANNEL_MASTER) == ANT_CONFIGURED)
             {
+                LCDMessage(LINE1_START_ADDR, "Hide and Go Seek!"); 
+                LCDMessage(LINE2_START_ADDR, "Press B0 to Start"); 
                 bMasterOrSlave=MASTER;
                 UserApp1_StateMachine = UserApp1SM_Idle;
             }
@@ -563,6 +630,8 @@ static void UserApp1SM_WaitChannelClose_Master(void)
       {
         if(AntRadioStatusChannel(ANT_CHANNEL_SLAVE) == ANT_CONFIGURED)
         {
+          LCDMessage(LINE1_START_ADDR, "Hide and Go Seek!"); 
+          LCDMessage(LINE2_START_ADDR, "Press B0 to Start"); 
           bMasterOrSlave=SLAVE;
           UserApp1_StateMachine = UserApp1SM_Idle;
         }

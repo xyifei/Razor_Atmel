@@ -71,7 +71,7 @@ void main(void)
 
   /* Application initialization */
 
-  UserApp1Initialize_Slave();
+  UserApp1Initialize_Master();
   UserApp2Initialize();
   UserApp3Initialize();
 
