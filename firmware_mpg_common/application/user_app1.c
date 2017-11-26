@@ -261,10 +261,10 @@ static void UserApp1SM_ChannelOpen(void)
 {
   static u8 u8LastState = 0xff;
   static u8 au8TickMessage[] = "EVENT x\n\r";  /* "x" at index [6] will be replaced by the current code */
-  static u8 au8DataContent[] = "xxxxxxxxxxxxxxxx";
-  static u8 au8LastAntData[ANT_APPLICATION_MESSAGE_BYTES] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  static u8 au8TestMessage[] = {0, 0, 0, 0, 0xA5, 0, 0, 0};
-  bool bGotNewData;
+  static u8 au8HeartRate[] = "00";
+  static u16 u16HeartRate=0;
+  static u8 u8LCDHR[]="000";
+  static u8 au8Message[]={0x46,0xFF,0xFF,0xFF,0xFF,0x80,0x07,0x01};
 
   /* Check for BUTTON0 to close channel */
   if(WasButtonPressed(BUTTON0))
@@ -285,6 +285,13 @@ static void UserApp1SM_ChannelOpen(void)
     UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
   } /* end if(WasButtonPressed(BUTTON0)) */
   
+  if(WasButtonPressed(BUTTON1))
+  {
+    /* Got the button, so complete one-time actions before next state */
+    ButtonAcknowledge(BUTTON1);
+    AntQueueAcknowledgedMessage(CHANNEL_TYPE_SLAVE,au8Message);
+  }
+  
   /* Always check for ANT messages */
   if( AntReadAppMessageBuffer() )
   {
@@ -296,62 +303,15 @@ static void UserApp1SM_ChannelOpen(void)
       /* We are synced with a device, so blue is solid */
       LedOff(GREEN);
       LedOn(BLUE);
-
-      /* Check if the new data is the same as the old data and update as we go */
-      bGotNewData = FALSE;
-      for(u8 i = 0; i < ANT_APPLICATION_MESSAGE_BYTES; i++)
-      {
-        if(G_au8AntApiCurrentMessageBytes[i] != au8LastAntData[i])
-        {
-          bGotNewData = TRUE;
-          au8LastAntData[i] = G_au8AntApiCurrentMessageBytes[i];
-
-          au8DataContent[2 * i]     = HexToASCIICharUpper(G_au8AntApiCurrentMessageBytes[i] / 16);
-          au8DataContent[2 * i + 1] = HexToASCIICharUpper(G_au8AntApiCurrentMessageBytes[i] % 16); 
-        }
-      }
       
-      if(bGotNewData)
-      {
-        /* We got new data: show on LCD */
-        LCDClearChars(LINE2_START_ADDR, 20); 
-        LCDMessage(LINE2_START_ADDR, au8DataContent); 
-        
-        /* Update our local message counter and send the message back */
-        au8TestMessage[7]++;
-        if(au8TestMessage[7] == 0)
-        {
-          au8TestMessage[6]++;
-          if(au8TestMessage[6] == 0)
-          {
-            au8TestMessage[5]++;
-          }
-        }
-        AntQueueBroadcastMessage(ANT_CHANNEL_USERAPP, au8TestMessage);
-
-        /* Check for a special packet and respond */
-        if(G_au8AntApiCurrentMessageBytes[0] == 0xA5)
-        {
-          LedOff(LCD_RED);
-          LedOff(LCD_GREEN);
-          LedOff(LCD_BLUE);
-          
-          if(G_au8AntApiCurrentMessageBytes[1] == 1)
-          {
-            LedOn(LCD_RED);
-          }
-          
-          if(G_au8AntApiCurrentMessageBytes[2] == 1)
-          {
-            LedOn(LCD_GREEN);
-          }
-
-          if(G_au8AntApiCurrentMessageBytes[3] == 1)
-          {
-            LedOn(LCD_BLUE);
-          }
-        }
-      } /* end if(bGotNewData) */
+      au8HeartRate[0] = G_au8AntApiCurrentMessageBytes[7] / 16;
+      au8HeartRate[1] = G_au8AntApiCurrentMessageBytes[7] % 16; 
+      u16HeartRate = au8HeartRate[0]*16+au8HeartRate[1];
+      u8LCDHR[0]=u16HeartRate/100+48;
+      u8LCDHR[1]=u16HeartRate/10-u16HeartRate/100*10+48;
+      u8LCDHR[2]=u16HeartRate%10+48;
+      LCDClearChars(LINE2_START_ADDR , 20);
+      LCDMessage(LINE2_START_ADDR, u8LCDHR);
     } /* end if(G_eAntApiCurrentMessageClass == ANT_DATA) */
     
     else if(G_eAntApiCurrentMessageClass == ANT_TICK)
