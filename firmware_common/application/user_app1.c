@@ -80,14 +80,24 @@ Description:
 Initializes the State Machine and its variables.
 
 Requires:
-  -
+  -  
 
 Promises:
   - 
 */
 void UserApp1Initialize(void)
 {
- 
+    AT91C_BASE_PIOA->PIO_PER = PIOA_PER_ADD_INIT;
+    AT91C_BASE_PIOA->PIO_PDR = PIOA_PDR_ADD_INIT;
+    AT91C_BASE_PIOA->PIO_OER = PIOA_OER_ADD_INIT;
+    AT91C_BASE_PIOA->PIO_ODR = PIOA_ODR_ADD_INIT;
+    AT91C_BASE_PIOB->PIO_PER = PIOB_PER_ADD_INIT;
+    AT91C_BASE_PIOB->PIO_PDR = PIOB_PDR_ADD_INIT;
+    AT91C_BASE_PIOB->PIO_OER = PIOB_OER_ADD_INIT;
+    AT91C_BASE_PIOB->PIO_ODR = PIOB_ODR_ADD_INIT;
+    AT91C_BASE_PIOA->PIO_SODR = PIOA_SODR_ADD_INIT;
+    AT91C_BASE_PIOB->PIO_CODR = PIOB_RE;
+    
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -126,7 +136,48 @@ void UserApp1RunActiveState(void)
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Private functions                                                                                                  */
 /*--------------------------------------------------------------------------------------------------------------------*/
-
+static void Volume_adjusting(void)
+{
+    if(WasButtonPressed(BUTTON0))
+    {
+        ButtonAcknowledge(BUTTON0);
+        AT91C_BASE_PIOA->PIO_SODR = Volume_Up_SODR;
+        AT91C_BASE_PIOA->PIO_CODR = Volume_Up_CODR;
+        LedOn(RED);
+        
+        for(u8 i=0;i<20;i++) 
+        {
+            AT91C_BASE_PIOA->PIO_CODR = PIOA_INC;
+            
+            for(u8 i=0;i<=5;i++)
+            {
+                for(u8 i=0;i<48;i++);
+            }
+            
+            AT91C_BASE_PIOA->PIO_SODR = PIOA_INC;
+        }
+    }
+    
+    if(WasButtonPressed(BUTTON1))
+    {
+        ButtonAcknowledge(BUTTON1);
+        AT91C_BASE_PIOA->PIO_SODR = Volume_Down_SODR;
+        AT91C_BASE_PIOA->PIO_CODR = Volume_Down_CODR;
+        LedOn(RED);
+        
+        for(u8 i=0;i<20;i++) 
+        {
+            AT91C_BASE_PIOA->PIO_CODR = PIOA_INC;
+            
+            for(u8 i=0;i<=5;i++)
+            {
+                for(u8 i=0;i<48;i++);
+            }
+            
+            AT91C_BASE_PIOA->PIO_SODR = PIOA_INC;
+        }
+    }
+}
 
 /**********************************************************************************************************************
 State Machine Function Definitions
@@ -136,7 +187,102 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+    static u8 u8Mode=0;
+    static float fData=0;
+    static bool bTest=FALSE;
+    
+    LedOff(RED);
+    
+    if(WasButtonPressed(BUTTON3))
+    {
+        ButtonAcknowledge(BUTTON3);
+        LedOn(RED);
+        
+        if(u8Mode == 2)
+        {
+            u8Mode = 0;
+        }
+        else
+        {
+            u8Mode++;
+        }
+        
+        switch(u8Mode)
+        {
+            case 0:
+                LCDClearChars(LINE1_START_ADDR,20);
+                LCDMessage(LINE1_START_ADDR, "MUTE");
+                break;
+            case 1:
+                LCDClearChars(LINE1_START_ADDR,20);
+                LCDMessage(LINE1_START_ADDR, "MIC");
+                break;
+            case 2:
+                LCDClearChars(LINE1_START_ADDR,20);
+                LCDMessage(LINE1_START_ADDR, "PHONE");
+        }
+    }
+    
+    if(u8Mode == 0)
+    {
+        AT91C_BASE_PIOA->PIO_SODR = Mute_SODR;
+        AT91C_BASE_PIOA->PIO_CODR = Mute_CODR;
+        LedOn(PURPLE);
+        LedOff(BLUE);
+        LedOff(GREEN);
+    }
+    
+    if(u8Mode == 1)
+    {
+        AT91C_BASE_PIOA->PIO_SODR = AUD1_SODR;
+        AT91C_BASE_PIOA->PIO_CODR = AUD1_CODR;
+        LedOn(BLUE);
+        LedOff(GREEN);
+        LedOff(PURPLE);
+        Volume_adjusting();      
+    }
+    
+    if(u8Mode == 2)
+    {
+        AT91C_BASE_PIOA->PIO_SODR = AUD2_SODR;
+        AT91C_BASE_PIOA->PIO_CODR = AUD2_CODR;
+        LedOn(GREEN);
+        LedOff(BLUE);
+        LedOff(PURPLE);
+        Volume_adjusting();    
+    }
+    
+    if(WasButtonPressed(BUTTON2))
+    {
+        ButtonAcknowledge(BUTTON2);
+        LedOn(RED);
+        AT91C_BASE_PIOA->PIO_SODR = PIOA_CY;
+        bTest = TRUE;      
+    }  
+    
+    if(bTest)
+    {
+        AT91C_BASE_PIOB->PIO_SODR = PIOB_RE;
+        LedOn(WHITE);
+  
+        if(Adc12StartConversion(ADC12_CH2))
+        {
+            for(u8 i=0;i<=200;i++)
+            {
+                for(u8 i=0;i<48;i++);
+            }
+            
+            fData=3.3/4096*AT91C_BASE_ADC12B->ADC12B_CDR[2];
+        }
+        
+        bTest = FALSE;
+    }
+    else
+    {
+         LedOff(WHITE);
+         AT91C_BASE_PIOB->PIO_CODR = PIOB_RE;
+         AT91C_BASE_PIOA->PIO_CODR = PIOA_CY;
+    }
 } /* end UserApp1SM_Idle() */
     
 
